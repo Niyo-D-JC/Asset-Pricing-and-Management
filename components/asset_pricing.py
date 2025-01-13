@@ -9,9 +9,10 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 
 class Pricing:
-    def __init__(self, ticker):
+    def __init__(self, ticker = "AAPL"):
         self.ticker = ticker
         self.data = self.get_data(ticker)
+        self.price = None
 
     def get_data(self, ticker_symbol, columns_to_extract=['lastPrice', 'strike', 'volume', 'bid', 'ask']):
         ticker = yf.Ticker(ticker_symbol)
@@ -63,6 +64,7 @@ class Pricing:
         # Concatenate all DataFrames into a single DataFrame
         final_df = pd.concat(options_data, ignore_index=True)
         final_df.drop(['callBid', 'callAsk', 'putBid', 'putAsk'], axis=1, inplace=True)
+        self.data = final_df
         return final_df
     
     def black_scholes(self, S, K, T, r, sigma, option_type='call'):
@@ -144,3 +146,63 @@ class Pricing:
             except ValueError:
                 # Handle exceptions during IV computation
                 self.data.loc[index, 'IV'] = np.nan
+        self.data = self.data.dropna(subset=['IV']).copy()
+
+
+    def compute_price(self, K, T, S,r=0.03, option_type="call"):
+        """
+        Compute the price of an option using the Black-Scholes formula.
+
+        Parameters:
+            K (float): Strike price.
+            T (float): Time to maturity in years.
+            r (float): Risk-free interest rate (default is 0.03).
+            option_type (str): Type of option ("call" or "put"). Default is "call".
+
+        Returns:
+            float: Option price.
+        """
+        # Ensure the necessary columns are present
+        required_columns = {"K", "T", "IV"}
+        if not required_columns.issubset(self.data.columns):
+            raise ValueError(f"The dataframe must contain the columns: {required_columns}")
+
+
+        # Case 1: Direct match
+        if K in self.data["K"].values and T in self.data["T"].values:
+            row = self.data[(self.data["K"] == K) & (self.data["T"] == T)]
+            sigma = row["IV"].values[0]
+            return self.black_scholes(S, K, T, r, sigma, option_type), sigma
+
+        try:
+            # Step 1: Find neighboring K values
+            K_lower = self.data[self.data["K"] <= K]["K"].max()
+            K_upper = self.data[self.data["K"] > K]["K"].min()
+
+            if pd.isna(K_lower) or pd.isna(K_upper):
+                raise ValueError("K is out of bounds for interpolation.")
+
+            # Step 2: Interpolate across T for each K
+            sigma_K_lower = self.interpolate_sigma(self.data[self.data["K"] == K_lower], T)
+            sigma_K_upper = self.interpolate_sigma(self.data[self.data["K"] == K_upper], T)
+
+            # Step 3: Interpolate across K
+            sigma = sigma_K_lower + (sigma_K_upper - sigma_K_lower) * (K - K_lower) / (K_upper - K_lower)
+
+            # Step 4: Price the option
+            return self.black_scholes(S, K, T, r, sigma, option_type), sigma
+
+        except Exception as e:
+            raise ValueError(f"Interpolation failed: {e}")
+
+    def interpolate_sigma(self, T):
+        """Interpolate sigma for a given T within a specific K."""
+        T_lower = self.data[self.data["T"] <= T]["T"].max()
+        T_upper = self.data[self.data["T"] > T]["T"].min()
+
+        if pd.isna(T_lower) or pd.isna(T_upper):
+            raise ValueError("T is out of bounds for interpolation.")
+
+        sigma_lower = self.data[self.data["T"] == T_lower]["IV"].values[0]
+        sigma_upper = self.data[self.data["T"] == T_upper]["IV"].values[0]
+        return sigma_lower + (sigma_upper - sigma_lower) * (T - T_lower) / (T_upper - T_lower)

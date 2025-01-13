@@ -7,8 +7,8 @@ INDEX_CONFIG = '''
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Adobe Price Prophet</title>
-        <link rel="icon" type="image/png" href="https://static.cdnlogo.com/logos/a/90/adobe.png">  <!-- Référence à votre favicon -->
+        <title>Asset Pricing & Management</title>
+        <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/12692/12692312.png">  <!-- Référence à votre favicon -->
         {%metas%}
         {%css%}
     </head>
