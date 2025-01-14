@@ -1,14 +1,15 @@
 from datetime import datetime, timedelta
 
-from dash import html, dcc
+from dash import html, dcc, dash_table
 import dash_bootstrap_components as dbc
 import pandas as pd
 import numpy as np
 import plotly.express as px
+from datetime import date
 
 class Analyse:
     def __init__(self):
-        self.button_type = html.Div(
+        self.button_frq = html.Div(
                 [
                     dbc.RadioItems(
                         id="radio-type",
@@ -17,10 +18,11 @@ class Analyse:
                         labelClassName="btn btn-outline-primary",
                         labelCheckedClassName="active",
                         options=[
-                            {"label": "Call", "value": 'call'},
-                            {"label": "Put", "value": 'put'},
+                            {"label": "Day", "value": 'day'},
+                            {"label": "Week", "value": 'week'},
+                            {"label": "Month", "value": 'month'},
                         ],
-                        value='call',
+                        value='day',
                     )
                 ],
                 className="radio-group",
@@ -115,7 +117,17 @@ class Analyse:
                                             )
                                                 ]
                                             )
-                                    )
+                                    ),
+                                    dbc.Row([
+                                            dbc.Col([
+                                            dcc.Graph(id='portfolio-managemnt-graph')
+                                         ], width=9),
+                                        dbc.Col([
+                                            dash_table.DataTable(id="data-table", filter_action="native", filter_options={"placeholder_text": "Filter..."}, page_size=10)
+                                            ], width=3)
+                                    ]),
+                                    
+
                                 ], width=9),
                                     dbc.Col([
                                     html.Br(),
@@ -124,6 +136,23 @@ class Analyse:
                                                 [ 
                                                 html.Div(
                                                         [
+                                                            dbc.Row([
+                                                                dbc.Col([
+                                                                    html.Div(
+                                                                    dcc.DatePickerSingle(
+                                                                        id="date-picker",
+                                                                        display_format="DD/MM/YYYY",
+                                                                        placeholder="Select a date",
+                                                                        date=date(2010, 1, 1),
+                                                                        style={"width": "100%"},
+                                                                    ),
+                                                                    style={"width": "100%",  "marginBottom": "15px"}, 
+                                                                ),
+                                                                     ], width=6),
+                                                                dbc.Col([
+                                                                    dbc.Button("Correlation", id="open-correlation", n_clicks=0, className="w-100"),
+                                                                    ], width=6)
+                                                            ]),
                                                             dbc.Input(placeholder="Add Ticker...", valid=True, className="mb-3"),
                                                             dcc.Dropdown(
                                                             id="remove-ticker-dropdown",
@@ -134,7 +163,27 @@ class Analyse:
                                                     )
                                                 ]
                                             )
-                                    )
+                                    ),
+                                    html.Br(),
+                                    dbc.Card(
+                                    dbc.CardBody(
+                                                [ 
+                                                self.button_frq
+                                                ]
+                                            )
+                                    ),
+                                    html.Br(),
+                                    dbc.Row([
+                                            dbc.Col([
+                                            html.Label("Min Weight:", style={"fontWeight": "bold"}),
+                                            dbc.Input(id="input-weight-inf", type="number", placeholder="Enter Weight - ...", className="mb-3")
+                                        ], width=6),
+                                        dbc.Col([
+                                            html.Label("Max Weight:", style={"fontWeight": "bold"}),
+                                            dbc.Input(id="input-weight-sup", debounce=True, type="number", placeholder="Enter Weight + ...", className="mb-3")
+                                        ], width=6)
+                                    ]),
+                                    
                                     ], width=3),
                                 ])
                     
