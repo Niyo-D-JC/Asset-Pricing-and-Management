@@ -78,6 +78,7 @@ symbole_list = [
     "BTC-USD", # Bitcoin (Cryptomonnaie)
 ]
 
+symbole_list = list(set(symbole_list))
 # Callback pour mettre à jour le contenu de la page en fonction du chemin d'URL
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
@@ -94,7 +95,7 @@ def render_page_content(pathname):
 @app.callback(
     [Output("ticker-symbole", "value"), Output("risk-free", "value"), Output("symbole-portofio", "children"),
      Output('remove-ticker-dropdown', 'options'),],
-    Input('load-data-button', 'n_clicks') 
+    Input('load-data-button', 'n_clicks'),
 )
 def initialize_elements(_):
     bdg = [dbc.Badge(s, color=analyse.color_name[np.random.randint(0, 7)], className="border me-1") for s in symbole_list]
@@ -224,8 +225,53 @@ def compute_iv(r, option_type, K, T):
 
 
 
+@app.callback(
+    [Output("symbole-portofio", "children", allow_duplicate=True),
+     Output('error-popup', 'is_open', allow_duplicate=True), Output('remove-ticker-dropdown', 'options', allow_duplicate=True)],
+    [Input('add-ticker-management', 'value'),
+     Input('close-error-popup', 'n_clicks')],
+     prevent_initial_call=True,
+)
+def add_symbole(ticker, close_error_clicks):
+    # Détection si la fermeture du popup est cliquée
+    if ctx.triggered_id == "close-error-popup":
+        return dash.no_update, False
+    
+    global symbole_list
+    # Tentative de récupération des données pour le ticker
+    try:
+        dta = yf.download(ticker, start='2010-01-01')
+        if ticker is None or dta.shape[0]<1:
+            raise ValueError("Invalid ticker")
+        
+        symbole_list.append(ticker)
+        symbole_list = list(set(symbole_list))
+        bdg = [dbc.Badge(s, color=analyse.color_name[np.random.randint(0, 7)], className="border me-1") for s in symbole_list]
+        return bdg, False, symbole_list
+    
+    except Exception:
+        bdg = [dbc.Badge(s, color=analyse.color_name[np.random.randint(0, 7)], className="border me-1") for s in symbole_list]
+        return bdg, True, symbole_list
+    
 
+@app.callback(
+    [Output("symbole-portofio", "children", allow_duplicate=True),
+     Output('error-popup', 'is_open', allow_duplicate=True), Output('remove-ticker-dropdown', 'options', allow_duplicate=True)],
+    [Input('remove-ticker-dropdown', 'value')],
+     prevent_initial_call=True,
+)
+def remove_symbole(ticker):
+ 
+    global symbole_list
 
+    if ticker is not None:
+        symbole_list.remove(ticker)
+        bdg = [dbc.Badge(s, color=analyse.color_name[np.random.randint(0, 7)], className="border me-1") for s in symbole_list]
+        return bdg, False, symbole_list
+    else :
+        bdg = [dbc.Badge(s, color=analyse.color_name[np.random.randint(0, 7)], className="border me-1") for s in symbole_list]
+        return bdg, False, symbole_list
+    
 if __name__ == '__main__':
     app.run(debug=True)
     

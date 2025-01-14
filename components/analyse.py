@@ -153,7 +153,7 @@ class Analyse:
                                                                     dbc.Button("Correlation", id="open-correlation", n_clicks=0, className="w-100"),
                                                                     ], width=6)
                                                             ]),
-                                                            dbc.Input(placeholder="Add Ticker...", valid=True, className="mb-3"),
+                                                            dbc.Input(placeholder="Add Ticker...", id = 'add-ticker-management', valid=True, className="mb-3", debounce=True, type="text"),
                                                             dcc.Dropdown(
                                                             id="remove-ticker-dropdown",
                                                             placeholder="Remove Ticker...",
@@ -183,6 +183,7 @@ class Analyse:
                                             dbc.Input(id="input-weight-sup", debounce=True, type="number", placeholder="Enter Weight + ...", className="mb-3")
                                         ], width=6)
                                     ]),
+                                    dbc.Button("Efficient Frontier", color = "success", id="run-frontier", n_clicks=0, className="w-100"),
                                     
                                     ], width=3),
                                 ])

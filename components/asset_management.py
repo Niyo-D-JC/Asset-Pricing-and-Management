@@ -2,10 +2,8 @@
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from scipy.stats import norm
 from scipy.optimize import minimize
 import numpy as np
-from datetime import datetime
 
 class Management:
     def __init__(self, assets = []):
