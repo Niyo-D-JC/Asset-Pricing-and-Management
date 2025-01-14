@@ -116,22 +116,24 @@ def update_option(value):
     [Input('ticker-symbole', 'value'),
      Input('close-error-popup', 'n_clicks')],
 )
-def update_graph(ticker, close_error_clicks):
+def update_graph(ticker_, close_error_clicks):
     # Détection si la fermeture du popup est cliquée
     if ctx.triggered_id == "close-error-popup":
         return dash.no_update, False
-    
     # Tentative de récupération des données pour le ticker
     try:
-        dta = yf.download(ticker, start='2010-01-01')
-        if ticker is None or dta.shape[0]<1:
+        dta_ = yf.download(ticker_, start='2010-01-01')
+        print(dta_)
+        if ticker_ is None or dta_.shape[0]<1:
             raise ValueError("Invalid ticker")
 
-        dta.columns = ['Close', 'High', 'Low', 'Open', 'Volume']
-        pricing.get_data(ticker)
-        pricing.price = float(dta['Close'].values[-1]) 
+        dta_.columns = ['Close', 'High', 'Low', 'Open', 'Volume']
+        pricing.get_data(ticker_)
+        pricing.price = float(dta_['Close'].values[-1]) 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=dta.index, y=dta['Close'], mode='lines', name='Close'))
+        
+        fig.add_trace(go.Scatter(x=dta_.index, y=dta_['Close'], mode='lines', name='Close'))
+        
         return fig, False
     
     except Exception:
@@ -234,11 +236,11 @@ def compute_iv(r, option_type, K, T):
      prevent_initial_call=True,
 )
 def add_symbole(ticker, close_error_clicks):
+    global symbole_list
     # Détection si la fermeture du popup est cliquée
     if ctx.triggered_id == "close-error-popup":
-        return dash.no_update, False
+        return dash.no_update, False, symbole_list
     
-    global symbole_list
     # Tentative de récupération des données pour le ticker
     try:
         dta = yf.download(ticker, start='2010-01-01')
@@ -275,13 +277,17 @@ def remove_symbole(ticker):
     
 
 @app.callback(
-    Output('portfolio-management-graph', 'figure'),
-    Input('portfolio-management-graph', 'id')  # Trigger statique (non dynamique ici)
+    [Output('portfolio-graph', 'figure'), Output('data-table', 'data'),
+     Output('data-table', 'columns')],
+    Input('load-data-button', 'n_clicks')
 )
-def update_graph(_):
+def update_graph_portfolio(_):
+    
     global symbole_list
 
     management = Management(symbole_list)
+    management.get_parameters(freq = "day")
+
     rf = 0.03
     # Rendements cibles
     mu_targets = np.linspace(0.01, 0.2, 100)
@@ -316,7 +322,7 @@ def update_graph(_):
         x=sml_volatilities, 
         y=mu_targets,
         mode='lines',
-        name='Frontière efficiente',
+        name='Efficient border',
         line=dict(color='blue')
     ))
 
@@ -334,7 +340,7 @@ def update_graph(_):
         x=[market_volatility], 
         y=[market_return],
         mode='markers',
-        name='Portefeuille du marché',
+        name='Market Portfolio',
         marker=dict(color='green', size=10)
     ))
 
@@ -343,21 +349,28 @@ def update_graph(_):
         x=[0], 
         y=[rf],
         mode='markers',
-        name='Taux sans risque',
+        name='Risk-free rate',
         marker=dict(color='black', size=10)
     ))
 
     # Configurer le graphique
     fig.update_layout(
-        title='CML étendue avec Portefeuille du Marché',
-        xaxis_title='Volatilité (Risque)',
-        yaxis_title='Rendement',
+        title='Extended CML with Market Portfolio',
+        xaxis_title='Volatility (Risk)',
+        yaxis_title='Yield-Return',
         legend=dict(x=0.02, y=0.98),
-        template='plotly_white',
-        grid=dict(visible=True)
+        template='plotly_white'
     )
 
-    return fig
+    df_market_weights = pd.DataFrame({
+        'Symbol': management.assets,
+        'Weight': np.round(market_weights, 5)
+    })
+    
+    table_data = df_market_weights.to_dict('records')
+    table_columns = [{'name': col, 'id': col} for col in df_market_weights.columns]
+
+    return fig, table_data, table_columns
 
 
 if __name__ == '__main__':

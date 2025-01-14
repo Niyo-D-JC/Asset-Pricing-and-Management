@@ -120,9 +120,10 @@ class Analyse:
                                     ),
                                     dbc.Row([
                                             dbc.Col([
-                                            dcc.Graph(id='portfolio-managemnt-graph')
+                                            dcc.Graph(id='portfolio-graph')
                                          ], width=9),
                                         dbc.Col([
+                                            html.Br(),
                                             dash_table.DataTable(id="data-table", filter_action="native", filter_options={"placeholder_text": "Filter..."}, page_size=10)
                                             ], width=3)
                                     ]),

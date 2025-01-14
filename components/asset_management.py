@@ -12,7 +12,7 @@ class Management:
         self.mu , self.sigma = [], None
 
     def get_returns(self, assets):
-        data = yf.download(start="2010-01-01", group_by="ticker")
+        data = yf.download(assets, start="2010-01-01", group_by="ticker")
 
         # Initialisation d'un DataFrame pour les rendements
         returns = pd.DataFrame()
@@ -29,18 +29,35 @@ class Management:
         returns = returns.dropna()
         return returns, data
     
-    def get_parameters(self, freq = "day"):
-        if freq == "day":
-            
-            for asset in self.assets:
-                first_value = self.data[asset]['Close'].dropna().iloc[0]
-                last_value = self.data[asset]['Close'].dropna().iloc[-1]
-                r_p = np.log(last_value / first_value)
-                mu_an = (r_p + 1)**(1/10) - 1
-                self.mu.append(mu_an)
+    def get_parameters(self, freq="day"):
+        valid_assets = []  # Liste pour les actifs valides
+        self.mu = []  # Liste pour stocker les mu
+        self.sigma = None  # Matrice de covariance
 
-        self.sigma = self.returns.cov().to_numpy()
-        self.sigma = 252*self.sigma
+        if freq == "day":
+            for asset in self.assets:
+                try:
+                    first_value = float(self.data[asset]['Close'].dropna().iloc[0])
+                    last_value = float(self.data[asset]['Close'].dropna().iloc[-1])
+                    r_p = np.log(last_value / first_value)
+
+                    # Vérifie si r_p > -1
+                    if r_p > -1:
+                        valid_assets.append(asset)
+                        mu_an = (r_p + 1)**(1/10) - 1  # Calcul du rendement annualisé
+                        self.mu.append(mu_an)
+                    else:
+                        print(f"The asset {asset} is excluded because r_p = {r_p} < -1")
+                except KeyError:
+                    print(f"Missing data for {asset}")
+
+        # Recalcul de sigma avec les actifs valides
+        if valid_assets:
+            filtered_returns = self.returns[valid_assets]
+            self.sigma = filtered_returns.cov().to_numpy()
+            self.sigma = 252 * self.sigma  # Ajustement annuel
+
+            self.assets = valid_assets
         return self.mu, self.sigma
     
     def portfolio_variance(self, weights):
@@ -57,7 +74,6 @@ class Management:
         n_assets = len(self.mu)
         init_weights = np.ones(n_assets) / n_assets
         init_weights = init_weights
-
         # Contraintes
         constraints = [
             {'type': 'eq', 'fun': self.weight_sum_constraint},
@@ -68,6 +84,7 @@ class Management:
         bounds = [range_ for _ in range(n_assets)]
 
         result = minimize(self.portfolio_variance, init_weights, bounds= bounds, method='SLSQP', constraints=constraints)
+        
         if result.success:
             optimal_weights = result.x
             portfolio_volatility = np.sqrt(self.portfolio_variance(optimal_weights))
