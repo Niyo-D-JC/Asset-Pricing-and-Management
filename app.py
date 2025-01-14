@@ -53,6 +53,30 @@ app.layout = html.Div(
     ])
 
 
+options_dict = {
+    True: "Call",  # Quand le switch est activé, "Call"
+    False: "Put"   # Quand le switch est désactivé, "Put"
+}
+
+options_dict_value = {
+    True: "call",  # Quand le switch est activé, "Call"
+    False: "put"   # Quand le switch est désactivé, "Put"
+}
+
+# 
+symbole_list = [
+    "AAPL",  # Apple (Technologie)
+    "EEM",   # iShares MSCI Emerging Markets ETF (Pays émergents)
+    "TLT",   # US Treasury Bonds (Obligations souveraines)
+    "HYG",   # High Yield Corporate Bonds
+    "GLD",   # Gold (Or)
+    "LDOS",  # Leidos Holdings Inc
+    "LLY",   # Eli Lilly & Co
+    "AMD",   # AMD
+    "USO",   # United States Oil Fund (Pétrole)
+    "VNQ",   # Vanguard Real Estate ETF (Immobilier)
+    "BTC-USD", # Bitcoin (Cryptomonnaie)
+]
 
 # Callback pour mettre à jour le contenu de la page en fonction du chemin d'URL
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
@@ -68,12 +92,21 @@ def render_page_content(pathname):
 ############################ ANALYSE #################################
 
 @app.callback(
-    [Output("ticker-symbole", "value"), Output("risk-free", "value")],
+    [Output("ticker-symbole", "value"), Output("risk-free", "value"), Output("symbole-portofio", "children"),
+     Output('remove-ticker-dropdown', 'options'),],
     Input('load-data-button', 'n_clicks') 
 )
-def initialize_days(_):
-    return "AAPL", 0.03
+def initialize_elements(_):
+    bdg = [dbc.Badge(s, color=analyse.color_name[np.random.randint(0, 7)], className="border me-1") for s in symbole_list]
+    return "AAPL", 0.03, bdg, symbole_list
 
+@app.callback(
+    Output("standalone-value", "children"),
+    Input("standalone-switch", "value")
+)
+def update_option(value):
+
+    return html.Div(f"{options_dict[value]}", style={"fontWeight": "bold", "color": "red"})
 
 @app.callback(
     [Output('ticker-pricing-graph', 'figure'),
@@ -94,6 +127,7 @@ def update_graph(ticker, close_error_clicks):
 
         dta.columns = ['Close', 'High', 'Low', 'Open', 'Volume']
         pricing.get_data(ticker)
+        pricing.price = float(dta['Close'].values[-1]) 
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=dta.index, y=dta['Close'], mode='lines', name='Close'))
         return fig, False
@@ -120,7 +154,6 @@ def handle_button_click(n_clicks, risk, is_open):
         # Vérifier si la colonne "Volatilité" existe, sinon la calculer
         if "IV" not in pricing.data.columns:
             pricing.compute_iv(risk)
-        print(risk)
         pricing.data = pricing.data.dropna(subset=['T', 'K', 'IV'])
         pivot = pricing.data.pivot(index='T', columns='K', values='IV')
         T = pivot.index.values  # Maturités (axe y)
@@ -155,35 +188,42 @@ def handle_button_click(n_clicks, risk, is_open):
 
 @app.callback(
     Output("output-div", "children"),
+    State("risk-free", "value"),
+    State("standalone-switch", "value"),
     State("input-K", "value"),
     Input("input-T", "value"),
     prevent_initial_call=True
 )
-def compute_iv(K, T):
+def compute_iv(r, option_type, K, T):
     if K is None or T is None:
         return dbc.Alert("Please provide valid inputs for K and T.", color="danger")
+    if "IV" not in pricing.data.columns:
+            if r == None:
+                r = 0.03
+            pricing.compute_iv(r)
 
-    price = 100  # Exemple : prix simulé
-    volatility = 0.2  # Exemple : volatilité simulée
-    delta = 0.5  # Exemple : delta simulé
-    gamma = 0.1  # Exemple : gamma simulé
-    vega = 0.2  # Exemple : vega simulé
-    theta = -0.01  # Exemple : theta simulé
+    S0 = pricing.price
+    price, volatility= pricing.compute_price(K, T, S0, r=r, option_type=options_dict_value[option_type])
+
+    delta, gamma, vega, theta = pricing.compute_greeks(K, T, S0, volatility, r=r, option_type=options_dict_value[option_type]) 
 
     # Mise en page en deux colonnes
     return dbc.Row([
         dbc.Col(html.Ul([
-            html.Li(f"Price: {price}", style={"marginBottom": "10px"}),
-            html.Li(f"Volatility: {volatility}", style={"marginBottom": "10px"}),
-            html.Li(f"Delta: {delta}", style={"marginBottom": "10px"}),
+            html.Li(f"Price: {price:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Volatility: {volatility:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Delta: {delta:.2f}", style={"marginBottom": "10px"}),
         ]), width=6),
 
         dbc.Col(html.Ul([
-            html.Li(f"Gamma: {gamma}", style={"marginBottom": "10px"}),
-            html.Li(f"Vega: {vega}", style={"marginBottom": "10px"}),
-            html.Li(f"Theta: {theta}", style={"marginBottom": "10px"})
+            html.Li(f"Gamma: {gamma:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Vega: {vega:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Theta: {theta:.2f}", style={"marginBottom": "10px"})
         ]), width=6)
     ],)
+
+
+
 
 
 if __name__ == '__main__':

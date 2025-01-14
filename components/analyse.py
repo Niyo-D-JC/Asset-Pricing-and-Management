@@ -8,13 +8,45 @@ import plotly.express as px
 
 class Analyse:
     def __init__(self):
-
+        self.button_type = html.Div(
+                [
+                    dbc.RadioItems(
+                        id="radio-type",
+                        className="btn-group",
+                        inputClassName="btn-check",
+                        labelClassName="btn btn-outline-primary",
+                        labelCheckedClassName="active",
+                        options=[
+                            {"label": "Call", "value": 'call'},
+                            {"label": "Put", "value": 'put'},
+                        ],
+                        value='call',
+                    )
+                ],
+                className="radio-group",
+            )
+        
+        self.color_name = ["primary", "secondary", "success", "warning", "danger", "info", "dark"]
+        
         self.tab =  dcc.Tabs([
                 dcc.Tab(label='Asset Pricing', children=[
                         dbc.Row(
                                 [
                                     dbc.Col([dcc.Graph(id='ticker-pricing-graph')], width=9),
-                                    dbc.Col([html.Br(), html.H6("Choose the Ticker :", style={"color": "#2c3e50", "fontWeight": "normal" }) ,
+                                    dbc.Col([html.Br(), 
+                                             
+                                        dbc.Row([
+                                            dbc.Col([
+                                                html.H6("Choose the Ticker :", style={"color": "#2c3e50", "fontWeight": "normal" }) ,
+                                            ], width=6),
+                                            dbc.Col([
+                                               dbc.Switch(
+                                                        id="standalone-switch",
+                                                        value=True,
+                                                    ),
+                                                ], width=3, className="d-flex justify-content-end" ),
+                                            dbc.Col(id="standalone-value", width=3, className="d-flex justify-content-start")
+                                        ]),
                                     dbc.Input(id="ticker-symbole",debounce=True, type='text', placeholder="Valid input...", 
                                               valid=True, className="mb-3"),
                                     dbc.Input(id="risk-free",debounce=True, type='number', placeholder="Valid input...", 
@@ -73,14 +105,47 @@ class Analyse:
                         ]),
                 dcc.Tab(label='Portfolio Management', children=[
                         dbc.Row(
-                                [
-
+                                [   dbc.Col([
+                                    html.Br(),
+                                    dbc.Card(
+                                        dbc.CardBody(
+                                                [ 
+                                                html.H5(
+                                                id="symbole-portofio"
+                                            )
+                                                ]
+                                            )
+                                    )
+                                ], width=9),
+                                    dbc.Col([
+                                    html.Br(),
+                                    dbc.Card(
+                                        dbc.CardBody(
+                                                [ 
+                                                html.Div(
+                                                        [
+                                                            dbc.Input(placeholder="Add Ticker...", valid=True, className="mb-3"),
+                                                            dcc.Dropdown(
+                                                            id="remove-ticker-dropdown",
+                                                            placeholder="Remove Ticker...",
+                                                            clearable=True,
+                                                        ),
+                                                        ]
+                                                    )
+                                                ]
+                                            )
+                                    )
+                                    ], width=3),
                                 ])
                     
                         ]),
                 ])
         
-
+    def add_ticker(self, symbole_list, symbole):
+        if symbole:
+            return symbole_list.append(dbc.Badge(symbole, color="primary", className="border me-1"))
+        else:
+            return symbole_list
 
     def render(self):
         row = html.Div(

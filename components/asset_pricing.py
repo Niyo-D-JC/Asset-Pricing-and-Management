@@ -195,14 +195,138 @@ class Pricing:
         except Exception as e:
             raise ValueError(f"Interpolation failed: {e}")
 
-    def interpolate_sigma(self, T):
+    def interpolate_sigma(self, data, T):
         """Interpolate sigma for a given T within a specific K."""
-        T_lower = self.data[self.data["T"] <= T]["T"].max()
-        T_upper = self.data[self.data["T"] > T]["T"].min()
+        T_lower = data[data["T"] <= T]["T"].max()
+        T_upper = data[data["T"] > T]["T"].min()
 
         if pd.isna(T_lower) or pd.isna(T_upper):
             raise ValueError("T is out of bounds for interpolation.")
 
-        sigma_lower = self.data[self.data["T"] == T_lower]["IV"].values[0]
-        sigma_upper = self.data[self.data["T"] == T_upper]["IV"].values[0]
+        sigma_lower = data[data["T"] == T_lower]["IV"].values[0]
+        sigma_upper = data[data["T"] == T_upper]["IV"].values[0]
         return sigma_lower + (sigma_upper - sigma_lower) * (T - T_lower) / (T_upper - T_lower)
+
+    def delta_greek(self, K, T, S, sigma, r=0.03, option_type="call"):
+        """
+        Calculate the Delta Greek for an option.
+
+        Parameters:
+            K (float): Strike price.
+            T (float): Time to maturity in years.
+            S (float): Current stock price.
+            sigma (float): Implied volatility.
+            r (float): Risk-free interest rate. Default is 0.03.
+            option_type (str): "call" or "put". Default is "call".
+
+        Returns:
+            float: Delta of the option.
+        """
+        if T <= 0 or sigma <= 0:
+            raise ValueError("T and sigma must be greater than 0.")
+
+        d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+        if option_type == "call":
+            return norm.cdf(d1)
+        elif option_type == "put":
+            return norm.cdf(d1) - 1
+        else:
+            raise ValueError("Invalid option type. Use 'call' or 'put'.")
+
+    def gamma_greek(self, K, T, S, sigma, r=0.03):
+        """
+        Calculate the Gamma Greek for an option.
+
+        Parameters:
+            K (float): Strike price.
+            T (float): Time to maturity in years.
+            S (float): Current stock price.
+            sigma (float): Implied volatility.
+            r (float): Risk-free interest rate. Default is 0.03.
+
+        Returns:
+            float: Gamma of the option.
+        """
+        if T <= 0 or sigma <= 0:
+            raise ValueError("T and sigma must be greater than 0.")
+
+        d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+        return norm.pdf(d1) / (S * sigma * np.sqrt(T))
+
+    def vega_greek(self, K, T, S, sigma, r=0.03):
+        """
+        Calculate the Vega Greek for an option.
+
+        Parameters:
+            K (float): Strike price.
+            T (float): Time to maturity in years.
+            S (float): Current stock price.
+            sigma (float): Implied volatility.
+            r (float): Risk-free interest rate. Default is 0.03.
+
+        Returns:
+            float: Vega of the option.
+        """
+        if T <= 0 or sigma <= 0:
+            raise ValueError("T and sigma must be greater than 0.")
+
+        d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+        return S * norm.pdf(d1) * np.sqrt(T)
+
+    def theta_greek(self, K, T, S, sigma, r=0.03, option_type="call"):
+        """
+        Calculate the Theta Greek for an option.
+
+        Parameters:
+            K (float): Strike price.
+            T (float): Time to maturity in years.
+            S (float): Current stock price.
+            sigma (float): Implied volatility.
+            r (float): Risk-free interest rate. Default is 0.03.
+            option_type (str): "call" or "put". Default is "call".
+
+        Returns:
+            float: Theta of the option.
+        """
+        if T <= 0 or sigma <= 0:
+            raise ValueError("T and sigma must be greater than 0.")
+
+        d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+        d2 = d1 - sigma * np.sqrt(T)
+
+        if option_type == "call":
+            return -S * norm.pdf(d1) * sigma / (2 * np.sqrt(T)) - r * K * np.exp(-r * T) * norm.cdf(d2)
+        elif option_type == "put":
+            return -S * norm.pdf(d1) * sigma / (2 * np.sqrt(T)) + r * K * np.exp(-r * T) * norm.cdf(-d2)
+        else:
+            raise ValueError("Invalid option type. Use 'call' or 'put'.")
+        
+    def compute_greeks(self, K, T, S, sigma, r=0.03, option_type="call"):
+        """
+        Compute the price and greeks of an option using the Black-Scholes formula.
+
+        Parameters:
+            K (float): Strike price.
+            T (float): Time to maturity in years.
+            r (float): Risk-free interest rate (default is 0.03).
+            option_type (str): Type of option ("call" or "put"). Default is "call".
+
+        Returns:
+            dict: Option price and greeks.
+        """
+        try:
+            # Compute the greeks
+            delta = self.delta_greek(K, T, S, r, sigma, option_type)
+            gamma = self.gamma_greek(K, T, S, r, sigma)
+            vega = self.vega_greek(K, T, S, r, sigma)
+            theta = self.theta_greek(K, T, S, r, sigma, option_type)
+
+            return {
+                "delta": delta,
+                "gamma": gamma,
+                "vega": vega,
+                "theta": theta
+            }
+
+        except Exception as e:
+            raise ValueError(f"Greek computation failed: {e}")
