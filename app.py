@@ -13,6 +13,7 @@ import numpy as np
 from components.menu import *
 from components.analyse import Analyse
 from components.asset_pricing import Pricing
+from components.asset_management import Management
 
 import plotly.express as px
 import pandas as pd
@@ -272,6 +273,93 @@ def remove_symbole(ticker):
         bdg = [dbc.Badge(s, color=analyse.color_name[np.random.randint(0, 7)], className="border me-1") for s in symbole_list]
         return bdg, False, symbole_list
     
+
+@app.callback(
+    Output('portfolio-management-graph', 'figure'),
+    Input('portfolio-management-graph', 'id')  # Trigger statique (non dynamique ici)
+)
+def update_graph(_):
+    global symbole_list
+
+    management = Management(symbole_list)
+    rf = 0.03
+    # Rendements cibles
+    mu_targets = np.linspace(0.01, 0.2, 100)
+    sml_volatilities = []
+    sml_weights = []
+
+    # Calcul de la frontière efficiente
+    for mu_target in mu_targets:
+        vol, weights = management.efficient_portfolio(mu_target, range_= (None, None))
+        if vol is not None and weights is not None:
+            sml_volatilities.append(vol)
+            sml_weights.append(weights)
+
+    # Identifier le portefeuille tangent (maximisation du ratio de Sharpe)
+    sharpe_ratios = (np.array(mu_targets) - rf) / np.array(sml_volatilities)
+    market_index = np.argmax(sharpe_ratios)
+    market_volatility = sml_volatilities[market_index]
+    market_return = mu_targets[market_index]
+    market_weights = sml_weights[market_index]
+
+    # Pente de la CML
+    cml_slope = (market_return - rf) / market_volatility
+
+    # Étendre la CML
+    extended_volatilities = np.linspace(0, max(sml_volatilities) * 1.1, 200)
+    cml_y = rf + cml_slope * extended_volatilities
+
+    fig = go.Figure()
+
+    # Ajouter la frontière efficiente
+    fig.add_trace(go.Scatter(
+        x=sml_volatilities, 
+        y=mu_targets,
+        mode='lines',
+        name='Frontière efficiente',
+        line=dict(color='blue')
+    ))
+
+    # Ajouter la CML étendue
+    fig.add_trace(go.Scatter(
+        x=extended_volatilities, 
+        y=cml_y,
+        mode='lines',
+        name='CML (Capital Market Line)',
+        line=dict(color='red', dash='dash')
+    ))
+
+    # Marquer le portefeuille du marché
+    fig.add_trace(go.Scatter(
+        x=[market_volatility], 
+        y=[market_return],
+        mode='markers',
+        name='Portefeuille du marché',
+        marker=dict(color='green', size=10)
+    ))
+
+    # Marquer le taux sans risque
+    fig.add_trace(go.Scatter(
+        x=[0], 
+        y=[rf],
+        mode='markers',
+        name='Taux sans risque',
+        marker=dict(color='black', size=10)
+    ))
+
+    # Configurer le graphique
+    fig.update_layout(
+        title='CML étendue avec Portefeuille du Marché',
+        xaxis_title='Volatilité (Risque)',
+        yaxis_title='Rendement',
+        legend=dict(x=0.02, y=0.98),
+        template='plotly_white',
+        grid=dict(visible=True)
+    )
+
+    return fig
+
+
 if __name__ == '__main__':
     app.run(debug=True)
     
