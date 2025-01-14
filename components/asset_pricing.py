@@ -5,7 +5,6 @@ import numpy as np
 from scipy.stats import norm
 from scipy.optimize import minimize
 import numpy as np
-import matplotlib.pyplot as plt
 from datetime import datetime
 
 class Pricing:
