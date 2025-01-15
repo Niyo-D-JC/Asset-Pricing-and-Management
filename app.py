@@ -281,17 +281,17 @@ def remove_symbole(ticker):
 
 @app.callback(
     [Output('portfolio-graph', 'figure'), Output('data-table', 'data'),
-     Output('data-table', 'columns')],
-    [Input('run-frontier', 'n_clicks')], 
+     Output('data-table', 'columns'), Output("modal-xl-corr", "is_open"),  Output("correlation-graph", "figure")],
+    [Input('run-frontier', 'n_clicks'), Input("open-correlation", "n_clicks")], 
     [State('radio-type', 'value'), State('input-weight-inf', 'value'),State("input-weight-sup", "value"),
-     State("date-picker", "date"), State("risk-free", "value")]
+     State("date-picker", "date"), State("risk-free", "value"), State("modal-xl-corr", "is_open")]
 )
-def update_graph_portfolio(n_click,type_freq, inf_w, sup_w, date_, r_):
-    _, _, symb_list = management.get_parameters(freq = type_freq, date_=date_)
+def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, open):
+    _, _, symb_list, corr_matrice = management.get_parameters(freq = type_freq, date_=date_)
     rf = 0.03
     if (n_click>0) and (r_ != None):
         rf = r_
-   
+
     # Rendements cibles
     mu_targets = np.linspace(0.01, 0.2, 100)
     sml_volatilities = []
@@ -377,7 +377,29 @@ def update_graph_portfolio(n_click,type_freq, inf_w, sup_w, date_, r_):
     table_data = df_market_weights.to_dict('records')
     table_columns = [{'name': col, 'id': col} for col in df_market_weights.columns]
 
-    return fig, table_data, table_columns
+    fig_corr = go.Figure(
+        data=go.Heatmap(
+            z=corr_matrice.to_numpy(),  # Les valeurs de corrélation
+            x=corr_matrice.columns,  # Les noms des colonnes (actifs)
+            y=corr_matrice.index,  # Les noms des lignes (actifs)
+            colorscale="Viridis",  # Échelle de couleurs
+            colorbar=dict(title="Correlation"),  # Titre de la barre de couleur
+        )
+        )
+
+    # Ajout du titre et des ajustements
+    fig_corr.update_layout(
+        title="Asset Correlation Matrix",
+        xaxis=dict(title="Assets"),
+        yaxis=dict(title="Assets"),
+        width=600,
+        height=600,
+    )
+    _open = open
+    if cor_n>0 : 
+        _open = True
+    return fig, table_data, table_columns, _open, fig_corr
+
 
 
 

@@ -152,6 +152,15 @@ class Analyse:
                                                                      ], width=6),
                                                                 dbc.Col([
                                                                     dbc.Button("Correlation", id="open-correlation", n_clicks=0, className="w-100"),
+                                                                    dbc.Modal(
+                                                                            [
+                                                                                dbc.ModalHeader(dbc.ModalTitle("Correlation Matrix")),
+                                                                                dbc.ModalBody(dcc.Graph(id="correlation-graph")),
+                                                                            ],
+                                                                            id="modal-xl-corr",
+                                                                            size="xl",
+                                                                            is_open=False,
+                                                                        ),
                                                                     ], width=6)
                                                             ]),
                                                             dbc.Input(placeholder="Add Ticker...", id = 'add-ticker-management', valid=True, className="mb-3", debounce=True, type="text"),

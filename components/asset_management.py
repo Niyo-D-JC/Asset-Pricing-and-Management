@@ -99,7 +99,7 @@ class Management:
             self.sigma = filtered_returns.cov().to_numpy()
             self.sigma = annual_factor * self.sigma 
 
-        return self.mu, self.sigma, valid_assets
+        return self.mu, self.sigma, valid_assets, filtered_returns.corr()
     
     def portfolio_variance(self, weights):
         return weights.T @ self.sigma @ weights
