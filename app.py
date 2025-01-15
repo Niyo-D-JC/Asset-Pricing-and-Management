@@ -87,6 +87,55 @@ symbole_list = list(set(symbole_list))
 management = Management(symbole_list)
 
 
+def plot_3d_surface(pricing_data, column_name):
+    """
+    Crée un graphique de surface 3D à partir des données de volatilité implicite.
+
+    Arguments :
+    pricing_data (pd.DataFrame) : DataFrame contenant les colonnes 'K', 'T' et une colonne de valeurs (par exemple, 'IV').
+    column_name (str) : Le nom de la colonne à tracer sur l'axe Z (par exemple, 'IV').
+
+    Retourne :
+    go.Figure : Un graphique Plotly de surface 3D.
+    """
+    # Vérification des colonnes nécessaires
+    if not all(col in pricing_data.columns for col in ["K", "T", column_name]):
+        raise ValueError(f"Les colonnes 'K', 'T' et '{column_name}' doivent être présentes dans le DataFrame.")
+    
+    # Extraction des données
+    strikes = pricing_data["K"].values
+    maturities = pricing_data["T"].values
+    z_values = pricing_data[column_name].values
+
+    # Création du graphique de surface 3D
+    fig = go.Figure(data=[
+        go.Mesh3d(
+            x=strikes,
+            y=maturities,
+            z=z_values,
+            colorbar_title=column_name,
+            colorscale='Viridis',
+            intensity=z_values,
+            showscale=True,
+            opacity=0.9
+        )
+    ])
+
+    # Mise en page
+    fig.update_layout(
+        title=f"{column_name} Surface",
+        scene=dict(
+            xaxis_title="Strike Price (K)",
+            yaxis_title="Maturity (T in years)",
+            zaxis_title=column_name,
+        ),
+        height=600,
+        width=800
+    )
+
+    return fig
+
+
 # Callback pour mettre à jour le contenu de la page en fonction du chemin d'URL
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
@@ -157,9 +206,9 @@ def update_graph(ticker_, close_error_clicks):
 @app.callback(
     [Output("modal-xl", "is_open"), Output("volatility-graph", "figure"), Output("output-greeks", "children")],
     [Input("open-volatility", "n_clicks"), Input("risk-free", "value")],
-    [State("modal-xl", "is_open")]
+    [State("modal-xl", "is_open"), State("standalone-switch", "value")]
 )
-def handle_button_click(n_clicks, risk, is_open):
+def handle_button_click(n_clicks, risk, is_open, option_type):
     if n_clicks > 0:
         # Vérifier si la colonne "Volatilité" existe, sinon la calculer
         pricing.compute_iv(risk)
@@ -193,18 +242,19 @@ def handle_button_click(n_clicks, risk, is_open):
             width=800
         )
 
+        pricing.calculate_greeks(risk, option_type=options_dict_value[option_type])
         graph = dcc.Tabs([
                 dcc.Tab(label='Delta', children=[
                         dbc.Row(
                                 [
-
+                                    dcc.Graph(figure=plot_3d_surface(pricing.data, "Delta")),
                                 ])
                     
                         ]),
                 dcc.Tab(label='Gamma', children=[
                         dbc.Row(
                                 [
-
+                                    dcc.Graph(figure=plot_3d_surface(pricing.data, "Gamma")),
                                 ])
                     
                         ]),
@@ -212,14 +262,14 @@ def handle_button_click(n_clicks, risk, is_open):
                 dcc.Tab(label='Vega', children=[
                         dbc.Row(
                                 [
-
+                                    dcc.Graph(figure=plot_3d_surface(pricing.data, "Vega")),
                                 ])
                     
                         ]),
                 dcc.Tab(label='Theta', children=[
                         dbc.Row(
                                 [
-
+                                    dcc.Graph(figure=plot_3d_surface(pricing.data, "Theta")),
                                 ])
                     
                         ]),
