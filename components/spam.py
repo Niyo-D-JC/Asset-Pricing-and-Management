@@ -14,58 +14,44 @@ class Pricing:
         self.data = self.get_data(ticker)
         self.price = None
 
-    def get_data(self, ticker_symbol, columns_to_extract=['lastPrice', 'strike', 'volume', 'bid', 'ask']):
+    def get_data(self, ticker_symbol):
         ticker = yf.Ticker(ticker_symbol)
+        expirations = ticker.options
+        data = []
+        for exp in expirations:
+            options_chain = ticker.option_chain(exp)
+            calls = options_chain.calls
+            puts = options_chain.puts
 
-        # Fetch the current price of the underlying asset
-        current_price = ticker.history(period="1d")['Close'].iloc[-1]
+            # Créer un DataFrame avec un index basé sur les strikes
+            calls = calls.set_index("strike")
+            puts = puts.set_index("strike")
 
-        # Fetch available expiration dates for the options
-        maturities = ticker.options
+            # Combiner les données des calls et puts sur le même strike
+            combined = calls.join(puts, how="outer", lsuffix="_call", rsuffix="_put")
+            for strike, row in combined.iterrows():
+                data.append([
+                    strike,
+                    exp,
+                    row.get("lastPrice_call", None),
+                    row.get("lastPrice_put", None),
+                    row.get("volume_call", 0),
+                    row.get("volume_put", 0),
+                    (row.get("bid_call", None), row.get("ask_call", None)),
+                    (row.get("bid_put", None), row.get("ask_put", None))
+                ])
+        options_table = pd.DataFrame(data, columns=["K", "T", "C", "P", "Volume Call", "Volume Put", "Bid/Ask Call", "Bid/Ask Put"])
 
-        # Initialize an empty list to store DataFrames for each maturity
-        options_data = []
+        options_table["T"] = pd.to_datetime(options_table["T"]) - pd.Timestamp.now()
+        options_table["T"] = options_table["T"].dt.days / 365.0  # Convertir en années
 
-        for maturity in maturities:
-            # Fetch the options chain for the current maturity
-            options_chain = ticker.option_chain(maturity)
+        # Supprimer les lignes sans prix de call et de put
+        # options_table = options_table.dropna(subset=["C", "P"], how="any").sort_values(by=["K", "T"])
+        # Remplacer les NaN dans les colonnes "Volume Call" et "Volume Put" par 0
+        options_table["Volume Call"] = options_table["Volume Call"].fillna(0)
+        options_table["Volume Put"] = options_table["Volume Put"].fillna(0)
 
-            # Extract Call and Put data, rename columns, and add maturity column
-            calls = options_chain.calls[columns_to_extract].copy()
-            calls.rename(columns={
-                'lastPrice': 'C',
-                'volume': 'C-volume',
-                'bid': 'callBid',
-                'ask': 'callAsk',
-                'strike': 'K'
-            }, inplace=True)
-            calls['C bid-ask'] = calls['callAsk'] - calls['callBid']  # Calculate bid-ask spread for calls
-            calls['Maturity'] = maturity
-            calls['T'] = (pd.to_datetime(maturity).date() - datetime.now().date()).days / 365.25
-
-            puts = options_chain.puts[columns_to_extract].copy()
-            puts.rename(columns={
-                'lastPrice': 'P',
-                'volume': 'P-volume',
-                'bid': 'putBid',
-                'ask': 'putAsk',
-                'strike': 'K'
-            }, inplace=True)
-            puts['P bid-ask'] = puts['putAsk'] - puts['putBid']  # Calculate bid-ask spread for puts
-            puts['Maturity'] = maturity
-            puts['T'] = (pd.to_datetime(maturity).date() - datetime.now().date()).days / 365.25
-            # Merge Call and Put data on 'strike' and 'T'
-            merged_data = pd.merge(calls, puts, on=['K', 'T','Maturity'], how='outer')
-            merged_data['S'] = current_price
-
-            # Append the merged data to the list
-            options_data.append(merged_data)
-
-        # Concatenate all DataFrames into a single DataFrame
-        final_df = pd.concat(options_data, ignore_index=True)
-        final_df.drop(['callBid', 'callAsk', 'putBid', 'putAsk'], axis=1, inplace=True)
-        self.data = final_df
-        return final_df
+        return options_table
     
     def black_scholes(self, S, K, T, r, sigma, option_type='call'):
         """
@@ -90,64 +76,54 @@ class Pricing:
 
         return option_price
     
-    def implied_volatility(self, market_price, S, K, T, r, option_type):
-        def objective(sigma):
-            # Ensure sigma is positive (volatility must be > 0)
-            if sigma <= 0:
-                return np.inf
-            # Compute the Black-Scholes price
-            theoretical_price = self.black_scholes(S, K, T, r, sigma, option_type)
-            # Return the squared error
-            return (theoretical_price - market_price)**2
+    def implied_volatility(self, market_price, S, K, T, r, option_type, tol=1e-3, max_iter=100):
 
-        # Initial guess and bounds for volatility
-        initial_guess = 0.2
-        bounds = [(10**-4, 5)]  # Volatility should be in a reasonable range
+        sigma = 0.4  # Initial guess pour la volatilité
+        for i in range(max_iter):
+            # Calculer le prix du call avec la volatilité courante
+            call_price = self.black_scholes(S, K, T, r, sigma, option_type=option_type)
+             
 
-        # Perform the minimization
-        result = minimize(objective, initial_guess, bounds=bounds, method='L-BFGS-B')
+            # Calculer Vega
+            d1 = (np.log(S / K) + (r + 0.5 * sigma**2) * T) / (sigma * np.sqrt(T))
+            vega = S * norm.pdf(d1) * np.sqrt(T)
 
-        # Check if the minimization was successful
-        if result.success:
-            return result.x[0]  # Return the optimized implied volatility
-        else:
-            raise ValueError("Implied volatility calculation failed.")
+            # Mettre à jour sigma
+            price_diff = call_price - market_price  # Erreur entre le prix calculé et le prix de marché
+            if abs(price_diff) < tol:
+                return sigma  # Convergence atteinte
+            sigma -= price_diff / vega  # Méthode de Newton-Raphson
+
+        return np.nan
         
     def compute_iv(self, r=0.03):
-        for index, row in self.data.iterrows():
-            try:
-                if not np.isnan(row['P']) and (np.isnan(row['C']) or row["P bid-ask"] < row["C bid-ask"]):
-                    # Use put option if C is NaN or P has a lower bid-ask spread
-                    iv = self.implied_volatility(
-                        S=row['S'],  # Current stock price
-                        K=row['K'],  # Strike price
-                        T=row['T'],  # Time to maturity
-                        r=r,      # Risk-free rate
-                        option_type='put',  # Option type
-                        market_price=row['P']  # Observed market price
-                    )
+        option_type = None
+        implied_vols = []
+        for _, row in self.data.iterrows():
+            K = row["K"]
+            T = row["T"]
+            call_price = row["C"]
+            put_price = row["P"]
+            volume_call = row["Volume Call"]
+            volume_put = row["Volume Put"]
 
-                elif not np.isnan(row['C']):
-                    # Use call option if C is valid and either P is NaN or C has a lower bid-ask spread
-                    iv = self.implied_volatility(
-                        S=row['S'],  # Current stock price
-                        K=row['K'],  # Strike price
-                        T=row['T'],  # Time to maturity
-                        r=r,      # Risk-free rate
-                        option_type='call',  # Option type
-                        market_price=row['C']  # Observed market price
-                    )
-                else:
-                    # If both C and P are NaN, set IV to NaN
-                    iv = np.nan
+            # Choisir le type d'option et le prix en fonction du volume
+            if volume_call >= volume_put:
+                option_price = call_price
+                option_type = "call"
+            else:
+                option_price = put_price
+                option_type = "put"
 
-                # Assign the computed implied volatility to the DataFrame
-                self.data.loc[index, 'IV'] = iv
-            except ValueError:
-                # Handle exceptions during IV computation
-                self.data.loc[index, 'IV'] = np.nan
-        self.data = self.data.dropna(subset=['IV']).copy()
+            # Calculer la volatilité implicite
+            
+            implied_vol = self.implied_volatility(option_price, self.price, K, T, r,option_type)
+            implied_vols.append(implied_vol)
 
+        # Ajouter les résultats au DataFrame
+        self.data["IV"] = implied_vols
+        self.data['Max_vol'] = np.maximum(self.data['Volume Call'], self.data['Volume Put'])
+        self.data[(self.data['IV'] > 0) & (self.data['Max_vol'] > 5)]
 
     def price_option_by_interpolation(self, K_target, T_target, S, r = 0.03, option_type="call"):
         """
@@ -188,7 +164,6 @@ class Pricing:
             raise ValueError("Type d'option invalide. Choisissez 'call' ou 'put'.")
 
         return price, vol_target
-
 
     def delta_greek(self, K, T, S, sigma, r=0.03, option_type="call"):
         """
@@ -314,6 +289,7 @@ class Pricing:
         except Exception as e:
             raise ValueError(f"Greek computation failed: {e}")
 
+
     def calculate_greeks(self, r, option_type="call"):
         """
         Calculer les Grecques (\Delta, \Gamma, \Theta, \Vega, \Rho) pour chaque combinaison K et T.
@@ -332,6 +308,7 @@ class Pricing:
         self.data["Gamma"] = np.nan
         self.data["Theta"] = np.nan
         self.data["Vega"] = np.nan
+        self.data["Rho"] = np.nan
 
         # Calculer les Grecques pour chaque ligne
         for idx, row in self.data.iterrows():
@@ -349,8 +326,10 @@ class Pricing:
             # Calcul des Grecques
             if option_type == "call":
                 delta = norm.cdf(d1)
+                rho = K * T * np.exp(-r * T) * norm.cdf(d2)
             elif option_type == "put":
                 delta = norm.cdf(d1) - 1
+                rho = -K * T * np.exp(-r * T) * norm.cdf(-d2)
             else:
                 raise ValueError("Type d'option invalide. Choisissez 'call' ou 'put'.")
 
@@ -364,3 +343,65 @@ class Pricing:
             self.data.at[idx, "Gamma"] = gamma
             self.data.at[idx, "Theta"] = theta
             self.data.at[idx, "Vega"] = vega
+            self.data.at[idx, "Rho"] = rho
+
+    def compute_price(self, K, T, S,r=0.03, option_type="call"):
+        """
+        Compute the price of an option using the Black-Scholes formula.
+
+        Parameters:
+            K (float): Strike price.
+            T (float): Time to maturity in years.
+            r (float): Risk-free interest rate (default is 0.03).
+            option_type (str): Type of option ("call" or "put"). Default is "call".
+
+        Returns:
+            float: Option price.
+        """
+        # Ensure the necessary columns are present
+        required_columns = {"K", "T", "IV"}
+        if not required_columns.issubset(self.data.columns):
+            raise ValueError(f"The dataframe must contain the columns: {required_columns}")
+
+
+        # Case 1: Direct match
+        if K in self.data["K"].values and T in self.data["T"].values:
+            row = self.data[(self.data["K"] == K) & (self.data["T"] == T)]
+            sigma = row["IV"].values[0]
+            return self.black_scholes(S, K, T, r, sigma, option_type), sigma
+
+        try:
+            # Step 1: Find neighboring K values
+            K_lower = self.data[self.data["K"] <= K]["K"].max()
+            K_upper = self.data[self.data["K"] > K]["K"].min()
+
+            if pd.isna(K_lower) or pd.isna(K_upper):
+                raise ValueError("K is out of bounds for interpolation.")
+
+            # Step 2: Interpolate across T for each K
+            sigma_K_lower = self.interpolate_sigma(self.data[self.data["K"] == K_lower], T)
+            sigma_K_upper = self.interpolate_sigma(self.data[self.data["K"] == K_upper], T)
+
+            # Step 3: Interpolate across K
+            sigma = sigma_K_lower + (sigma_K_upper - sigma_K_lower) * (K - K_lower) / (K_upper - K_lower)
+
+            # Step 4: Price the option
+            return self.black_scholes(S, K, T, r, sigma, option_type), sigma
+
+        except Exception as e:
+            raise ValueError(f"Interpolation failed: {e}")
+
+    def interpolate_sigma(self, data, T):
+        """Interpolate sigma for a given T within a specific K."""
+        T_lower = data[data["T"] <= T]["T"].max()
+        T_upper = data[data["T"] > T]["T"].min()
+
+        if pd.isna(T_lower) or pd.isna(T_upper):
+            raise ValueError("T is out of bounds for interpolation.")
+
+        sigma_lower = data[data["T"] == T_lower]["IV"].values[0]
+        sigma_upper = data[data["T"] == T_upper]["IV"].values[0]
+        return sigma_lower + (sigma_upper - sigma_lower) * (T - T_lower) / (T_upper - T_lower)
+
+
+

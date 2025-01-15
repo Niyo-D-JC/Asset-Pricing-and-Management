@@ -34,7 +34,7 @@ class Analyse:
                 dcc.Tab(label='Asset Pricing', children=[
                         dbc.Row(
                                 [
-                                    dbc.Col([dcc.Graph(id='ticker-pricing-graph')], width=9),
+                                    dbc.Col([dcc.Graph(id='ticker-pricing-graph'), html.Div(id="output-greeks")], width=9),
                                     dbc.Col([html.Br(), 
                                              
                                         dbc.Row([

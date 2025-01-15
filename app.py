@@ -19,6 +19,9 @@ import plotly.express as px
 import pandas as pd
 from collections import Counter
 
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
 # Initialisation du chemin permettant le lancement de l'application
 # Définition du chemin de base pour l'application Dash en utilisant une variable d'environnement pour l'utilisateur
 
@@ -152,30 +155,33 @@ def update_graph(ticker_, close_error_clicks):
 
 
 @app.callback(
-    [Output("modal-xl", "is_open"), Output("volatility-graph", "figure")],
+    [Output("modal-xl", "is_open"), Output("volatility-graph", "figure"), Output("output-greeks", "children")],
     [Input("open-volatility", "n_clicks"), Input("risk-free", "value")],
     [State("modal-xl", "is_open")]
 )
 def handle_button_click(n_clicks, risk, is_open):
     if n_clicks > 0:
         # Vérifier si la colonne "Volatilité" existe, sinon la calculer
-        if "IV" not in pricing.data.columns:
-            pricing.compute_iv(risk)
+        pricing.compute_iv(risk)
         pricing.data = pricing.data.dropna(subset=['T', 'K', 'IV'])
-        pivot = pricing.data.pivot(index='T', columns='K', values='IV')
-        T = pivot.index.values  # Maturités (axe y)
-        K = pivot.columns.values  # Strikes (axe x)
-        IV = pivot.values  # Volatilités implicites (axe z)
 
-        # Créer un graphique 3D avec Plotly
-        T_mesh, K_mesh = np.meshgrid(T, K, indexing='ij')
-        fig = go.Figure(
-            data=[
-                go.Surface(
-                    z=IV, x=K_mesh, y=T_mesh, colorscale='Viridis'
-                )
-            ]
-        )
+        strikes = pricing.data["K"].values
+        maturities = pricing.data["T"].values
+        implied_vols = pricing.data["IV"].values
+
+        # Création de la surface 3D
+        fig = go.Figure(data=[go.Mesh3d(
+            x=strikes,
+            y=maturities,
+            z=implied_vols,
+            colorbar_title='Volatilité',
+            colorscale='Viridis',
+            intensity=implied_vols,
+            showscale=True,
+            opacity=0.9
+        )])
+
+        # Ajouter des titres et des étiquettes
         fig.update_layout(
             title="Implied Volatility Surface",
             scene=dict(
@@ -187,9 +193,41 @@ def handle_button_click(n_clicks, risk, is_open):
             width=800
         )
 
-        return True, fig
+        graph = dcc.Tabs([
+                dcc.Tab(label='Delta', children=[
+                        dbc.Row(
+                                [
 
-    return is_open, dash.no_update
+                                ])
+                    
+                        ]),
+                dcc.Tab(label='Gamma', children=[
+                        dbc.Row(
+                                [
+
+                                ])
+                    
+                        ]),
+
+                dcc.Tab(label='Vega', children=[
+                        dbc.Row(
+                                [
+
+                                ])
+                    
+                        ]),
+                dcc.Tab(label='Theta', children=[
+                        dbc.Row(
+                                [
+
+                                ])
+                    
+                        ]),
+                ])
+        
+        return True, fig, graph
+
+    return is_open, dash.no_update, dash.no_update
 
 
 
@@ -208,24 +246,24 @@ def compute_iv(r, option_type, K, T):
             if r == None:
                 r = 0.03
             pricing.compute_iv(r)
-
+    
     S0 = pricing.price
-    price, volatility= pricing.compute_price(K, T, S0, r=r, option_type=options_dict_value[option_type])
-
-    delta, gamma, vega, theta = pricing.compute_greeks(K, T, S0, volatility, r=r, option_type=options_dict_value[option_type]) 
+    price, volatility= pricing.price_option_by_interpolation(K, T, S0, r=r, option_type=options_dict_value[option_type])
+    
+    greeks = pricing.compute_greeks(K, T, S0, volatility, r=r, option_type=options_dict_value[option_type]) 
 
     # Mise en page en deux colonnes
     return dbc.Row([
         dbc.Col(html.Ul([
             html.Li(f"Price: {price:.2f}", style={"marginBottom": "10px"}),
-            html.Li(f"Volatility: {volatility:.2f}", style={"marginBottom": "10px"}),
-            html.Li(f"Delta: {delta:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"IV: {volatility:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Delta: {greeks["delta"]:.2f}", style={"marginBottom": "10px"}),
         ]), width=6),
 
         dbc.Col(html.Ul([
-            html.Li(f"Gamma: {gamma:.2f}", style={"marginBottom": "10px"}),
-            html.Li(f"Vega: {vega:.2f}", style={"marginBottom": "10px"}),
-            html.Li(f"Theta: {theta:.2f}", style={"marginBottom": "10px"})
+            html.Li(f"Gamma: {greeks["gamma"]:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Vega: {greeks["vega"]:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Theta: {greeks["theta"]:.2f}", style={"marginBottom": "10px"})
         ]), width=6)
     ],)
 
