@@ -177,7 +177,7 @@ class Analyse:
                                     dbc.Row([
                                             dbc.Col([
                                             html.Label("Min Weight:", style={"fontWeight": "bold"}),
-                                            dbc.Input(id="input-weight-inf", type="number", placeholder="Enter Weight - ...", className="mb-3")
+                                            dbc.Input(id="input-weight-inf", type="number", value=-0.1, placeholder="Enter Weight - ...", className="mb-3")
                                         ], width=6),
                                         dbc.Col([
                                             html.Label("Max Weight:", style={"fontWeight": "bold"}),

@@ -282,13 +282,16 @@ def remove_symbole(ticker):
 @app.callback(
     [Output('portfolio-graph', 'figure'), Output('data-table', 'data'),
      Output('data-table', 'columns')],
-    Input('load-data-button', 'n_clicks')
+    [Input('run-frontier', 'n_clicks')], 
+    [State('radio-type', 'value'), State('input-weight-inf', 'value'),State("input-weight-sup", "value"),
+     State("date-picker", "date"), State("risk-free", "value")]
 )
-def update_graph_portfolio(_):
-    
-    _, _, symb_list = management.get_parameters(freq = "day")
+def update_graph_portfolio(_,type_freq, inf_w, sup_w, date_, r):
+    _, _, symb_list = management.get_parameters(freq = type_freq, date_=date_)
 
     rf = 0.03
+    if rf:
+        rf = r
     # Rendements cibles
     mu_targets = np.linspace(0.01, 0.2, 100)
     sml_volatilities = []
@@ -296,7 +299,7 @@ def update_graph_portfolio(_):
 
     # Calcul de la frontière efficiente
     for mu_target in mu_targets:
-        vol, weights = management.efficient_portfolio(mu_target, range_= (None, None))
+        vol, weights = management.efficient_portfolio(mu_target, range_= (inf_w, sup_w))
         if vol is not None and weights is not None:
             sml_volatilities.append(vol)
             sml_weights.append(weights)
@@ -366,11 +369,20 @@ def update_graph_portfolio(_):
         'Symbol': symb_list,
         'Weight': np.round(market_weights, 5)
     })
+
+    df_market_weights = df_market_weights.reindex(
+        df_market_weights['Weight'].abs().sort_values(ascending=False).index
+    )
     
     table_data = df_market_weights.to_dict('records')
     table_columns = [{'name': col, 'id': col} for col in df_market_weights.columns]
 
     return fig, table_data, table_columns
+
+
+
+################### TRACKING ERROR ####################
+
 
 
 if __name__ == '__main__':

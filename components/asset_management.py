@@ -8,28 +8,35 @@ import numpy as np
 class Management:
     def __init__(self, assets = []):
         self.assets = assets
-        self.returns , self.data = self.get_returns(assets)
+        self.data , self.returns = self.get_data(assets), self.get_returns(assets, "2010-01-01")
         self.mu , self.sigma = [], None
 
-    def get_returns(self, assets):
+    def get_data(self, assets):
         data = yf.download(assets, start="2010-01-01", group_by="ticker")
-
+        self.data = data
+        return data
+    
+    def get_returns(self, assets, date_="2010-01-01"):
         # Initialisation d'un DataFrame pour les rendements
+        filtered_data = self.data.loc[self.data.index > date_]
         returns = pd.DataFrame()
 
         # Calcul des log-rendements négatifs pour chaque actif
         for asset in assets:
             try:
                 # Vérifie si la colonne 'Close' est disponible
-                if 'Close' in data[asset]:
+                if 'Close' in filtered_data[asset]:
                     # Log-rendements négatifs
-                    returns[asset] = np.log(data[asset]['Close'] / data[asset]['Close'].shift(1))
+                    returns[asset] = np.log(filtered_data[asset]['Close'] / filtered_data[asset]['Close'].shift(1))
             except KeyError:
                 print(f"Données manquantes pour {asset}")
         returns = returns.dropna()
-        return returns, data
+        self.returns = returns
+        
+        return returns
     
-    def get_parameters(self, freq="day"):
+    def get_parameters(self, freq="day",date_="2010-01-01"):
+        self.get_returns(self.assets, date_)
         valid_assets = []  # Liste pour les actifs valides
         self.mu = []  # Liste pour stocker les mu
         self.sigma = None  # Matrice de covariance
@@ -41,23 +48,29 @@ class Management:
                     last_value = float(self.data[asset]['Close'].dropna().iloc[-1])
                     r_p = np.log(last_value / first_value)
 
+                    first_date = self.data[asset]['Close'].dropna().index[0]
+                    last_date = self.data[asset]['Close'].dropna().index[-1]
+
+                    # Calcul de la différence en années
+                    num_years = (last_date - first_date).days / 365.25
+                    
                     # Vérifie si r_p > -1
                     if r_p > -1:
                         valid_assets.append(asset)
-                        mu_an = (r_p + 1)**(1/10) - 1  # Calcul du rendement annualisé
+                        mu_an = (r_p + 1)**(1/num_years) - 1  # Calcul du rendement annualisé
                         self.mu.append(mu_an)
                     else:
                         print(f"The asset {asset} is excluded because r_p = {r_p} < -1")
                 except KeyError:
                     print(f"Missing data for {asset}")
 
-        # Recalcul de sigma avec les actifs valides
-        if valid_assets:
-            filtered_returns = self.returns[valid_assets]
-            self.sigma = filtered_returns.cov().to_numpy()
-            self.sigma = 252 * self.sigma  # Ajustement annuel
-
-            #self.assets = valid_assets
+                # Recalcul de sigma avec les actifs valides
+                if valid_assets:
+                    filtered_returns = self.returns[valid_assets]
+                    self.sigma = filtered_returns.cov().to_numpy()
+                    self.sigma = 252 * self.sigma  # Ajustement annuel
+        
+       
         return self.mu, self.sigma, valid_assets
     
     def portfolio_variance(self, weights):
