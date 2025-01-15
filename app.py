@@ -286,12 +286,12 @@ def remove_symbole(ticker):
     [State('radio-type', 'value'), State('input-weight-inf', 'value'),State("input-weight-sup", "value"),
      State("date-picker", "date"), State("risk-free", "value")]
 )
-def update_graph_portfolio(_,type_freq, inf_w, sup_w, date_, r):
+def update_graph_portfolio(n_click,type_freq, inf_w, sup_w, date_, r_):
     _, _, symb_list = management.get_parameters(freq = type_freq, date_=date_)
-
     rf = 0.03
-    if rf:
-        rf = r
+    if (n_click>0) and (r_ != None):
+        rf = r_
+   
     # Rendements cibles
     mu_targets = np.linspace(0.01, 0.2, 100)
     sml_volatilities = []

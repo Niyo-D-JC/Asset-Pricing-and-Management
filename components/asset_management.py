@@ -16,18 +16,26 @@ class Management:
         self.data = data
         return data
     
-    def get_returns(self, assets, date_="2010-01-01"):
+    def get_returns(self, assets, date_="2010-01-01", freq="day"):
         # Initialisation d'un DataFrame pour les rendements
         filtered_data = self.data.loc[self.data.index > date_]
+
+        if freq == "week":
+            resampled_data = filtered_data.resample('W').last()  # Dernière valeur de chaque semaine
+        elif freq == "month":
+            resampled_data = filtered_data.resample('M').last()  # Dernière valeur de chaque mois
+        else:  # Par défaut, "day"
+            resampled_data = filtered_data
+
         returns = pd.DataFrame()
 
         # Calcul des log-rendements négatifs pour chaque actif
         for asset in assets:
             try:
                 # Vérifie si la colonne 'Close' est disponible
-                if 'Close' in filtered_data[asset]:
+                if 'Close' in resampled_data[asset]:
                     # Log-rendements négatifs
-                    returns[asset] = np.log(filtered_data[asset]['Close'] / filtered_data[asset]['Close'].shift(1))
+                    returns[asset] = np.log(resampled_data[asset]['Close'] / resampled_data[asset]['Close'].shift(1))
             except KeyError:
                 print(f"Données manquantes pour {asset}")
         returns = returns.dropna()
@@ -35,42 +43,62 @@ class Management:
         
         return returns
     
-    def get_parameters(self, freq="day",date_="2010-01-01"):
-        self.get_returns(self.assets, date_)
+    def get_parameters(self, freq="day", date_="2010-01-01"):
+        self.get_returns(self.assets, date_, freq)
         valid_assets = []  # Liste pour les actifs valides
         self.mu = []  # Liste pour stocker les mu
         self.sigma = None  # Matrice de covariance
 
-        if freq == "day":
-            for asset in self.assets:
-                try:
-                    first_value = float(self.data[asset]['Close'].dropna().iloc[0])
-                    last_value = float(self.data[asset]['Close'].dropna().iloc[-1])
-                    r_p = np.log(last_value / first_value)
-
-                    first_date = self.data[asset]['Close'].dropna().index[0]
-                    last_date = self.data[asset]['Close'].dropna().index[-1]
-
-                    # Calcul de la différence en années
-                    num_years = (last_date - first_date).days / 365.25
-                    
-                    # Vérifie si r_p > -1
-                    if r_p > -1:
-                        valid_assets.append(asset)
-                        mu_an = (r_p + 1)**(1/num_years) - 1  # Calcul du rendement annualisé
-                        self.mu.append(mu_an)
-                    else:
-                        print(f"The asset {asset} is excluded because r_p = {r_p} < -1")
-                except KeyError:
-                    print(f"Missing data for {asset}")
-
-                # Recalcul de sigma avec les actifs valides
-                if valid_assets:
-                    filtered_returns = self.returns[valid_assets]
-                    self.sigma = filtered_returns.cov().to_numpy()
-                    self.sigma = 252 * self.sigma  # Ajustement annuel
+        # Facteurs d'annualisation
+        annualization_factors = {
+            "day": 252,  # Nombre moyen de jours de bourse par an
+            "week": 52,  # Nombre de semaines dans une année
+            "month": 12  # Nombre de mois dans une année
+        }
         
-       
+        if freq not in annualization_factors:
+            raise ValueError("Invalid frequency. Choose from 'day', 'week', or 'month'.")
+
+        annual_factor = annualization_factors[freq]
+        
+        # Resampler les données selon la fréquence
+        if freq == "week":
+            resampled_data = self.data.resample('W').last()  # Dernière valeur de chaque semaine
+        elif freq == "month":
+            resampled_data = self.data.resample('M').last()  # Dernière valeur de chaque mois
+        else:  # Par défaut, "day"
+            resampled_data = self.data
+
+        for asset in self.assets:
+            try:
+                # Calcul des rendements log
+                first_value = float(resampled_data[asset]['Close'].dropna().iloc[0])
+                last_value = float(resampled_data[asset]['Close'].dropna().iloc[-1])
+                r_p = np.log(last_value / first_value)
+
+                first_date = resampled_data[asset]['Close'].dropna().index[0]
+                last_date = resampled_data[asset]['Close'].dropna().index[-1]
+
+                # Calcul de la différence en années
+                num_years = (last_date - first_date).days / 365.25
+
+                # Vérifie si r_p > -1
+                if r_p > -1:
+                    valid_assets.append(asset)
+                    mu_an = (r_p + 1)**(1/num_years) - 1  # Calcul du rendement annualisé
+                    self.mu.append(mu_an)
+                else:
+                    print(f"The asset {asset} is excluded because r_p = {r_p} < -1")
+            except KeyError:
+                print(f"Missing data for {asset}")
+
+        # Recalcul de sigma avec les actifs valides
+        if valid_assets:
+            filtered_returns = self.returns[valid_assets]
+            
+            self.sigma = filtered_returns.cov().to_numpy()
+            self.sigma = annual_factor * self.sigma 
+
         return self.mu, self.sigma, valid_assets
     
     def portfolio_variance(self, weights):
