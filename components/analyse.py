@@ -101,7 +101,13 @@ class Analyse:
                 dcc.Tab(label='Tracking Error', children=[
                         dbc.Row(
                                 [
-
+                                    # dbc.Col([
+                                    #     dbc.Button("Run Tracking Error", id="run-tracking-error", className="btn btn-primary"),
+                                    #     html.Div(id="optimized-weights", style={"marginTop": "20px", "fontSize": "16px"}),
+                                    # ], width=3),
+                                    # dbc.Col([
+                                    #     dcc.Graph(id="tracking-error-graph"),  # Ensure height is sufficient
+                                    # ], width=9),
                                 ])
                     
                         ]),
