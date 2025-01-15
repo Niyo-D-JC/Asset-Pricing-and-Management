@@ -14,6 +14,7 @@ from components.menu import *
 from components.analyse import Analyse
 from components.asset_pricing import Pricing
 from components.asset_management import Management
+from components.asset_tracking import IndexReplication
 
 import plotly.express as px
 import pandas as pd
@@ -313,13 +314,13 @@ def compute_iv(r, option_type, K, T):
         dbc.Col(html.Ul([
             html.Li(f"Price: {price:.2f}", style={"marginBottom": "10px"}),
             html.Li(f"IV: {volatility:.2f}", style={"marginBottom": "10px"}),
-            html.Li(f"Delta: {greeks["delta"]:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Delta: {greeks['delta']:.2f}", style={"marginBottom": "10px"}),
         ]), width=6),
 
         dbc.Col(html.Ul([
-            html.Li(f"Gamma: {greeks["gamma"]:.2f}", style={"marginBottom": "10px"}),
-            html.Li(f"Vega: {greeks["vega"]:.2f}", style={"marginBottom": "10px"}),
-            html.Li(f"Theta: {greeks["theta"]:.2f}", style={"marginBottom": "10px"})
+            html.Li(f"Gamma: {greeks['gamma']:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Vega: {greeks['vega']:.2f}", style={"marginBottom": "10px"}),
+            html.Li(f"Theta: {greeks['theta']:.2f}", style={"marginBottom": "10px"})
         ]), width=6)
     ],)
 
@@ -498,7 +499,107 @@ def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, o
 
 
 ################### TRACKING ERROR ####################
+# # ticker du cac 40
+# cac40_ticker = "^FCHI"
 
+# # tickers des composants du CAC 40
+# cac40_components_ticker = {
+#     "ACCOR": "AC.PA",
+#     "AIR LIQUIDE": "AI.PA",
+#     "AIRBUS GROUP": "AIR.PA",
+#     "ARCELORMITTAL": "MT.AS",
+#     "AXA": "CS.PA",
+#     "BNP PARIBAS": "BNP.PA",
+#     "BOUYGUES": "EN.PA",
+#     "BUREAU VERITAS": "BVI.PA",
+#     "CAPGEMINI": "CAP.PA",
+#     "CARREFOUR": "CA.PA",
+#     "CREDIT AGRICOLE": "ACA.PA",
+#     "DANONE": "BN.PA",
+#     "DASSAULT SYSTEMES": "DSY.PA",
+#     "EDENRED": "EDEN.PA",
+#     "ENGIE": "ENGI.PA",
+#     "ESSILORLUXOTTICA": "EL.PA",
+#     "EUROFINS SCIENTIFIC": "ERF.PA",
+#     "HERMES INTERNATIONAL": "RMS.PA",
+#     "KERING": "KER.PA",
+#     "LEGRAND": "LR.PA",
+#     "LOREAL": "OR.PA",
+#     "LVMH": "MC.PA",
+#     "MICHELIN": "ML.PA",
+#     "ORANGE": "ORA.PA",
+#     "PERNOD RICARD": "RI.PA",
+#     "PUBLICIS": "PUB.PA",
+#     "RENAULT": "RNO.PA",
+#     "SAFRAN": "SAF.PA",
+#     "SAINT-GOBAIN": "SGO.PA",
+#     "SANOFI": "SAN.PA",
+#     "SCHNEIDER ELECTRIC": "SU.PA",
+#     "SOCIETE GENERALE": "GLE.PA",
+#     "STELLANTIS": "STLA",
+#     "STMICROELECTRONICS": "STMPA.PA",
+#     "TELEPERFORMANCE": "TEP.PA",
+#     "THALES": "HO.PA",
+#     "TOTALENERGIES": "TTE.PA",
+#     "UNIBAIL-RODAMCO-WESTFIELD": "UNBLF",
+#     "VEOLIA ENVIRONNEMENT": "VIE.PA",
+#     "VINCI": "DG.PA"
+
+# }
+
+# cac40_tickers = list(cac40_components_ticker.values())
+# start_date = "2010-01-01"
+# end_date = "2024-12-31"
+
+# replication = IndexReplication(cac40_ticker, cac40_tickers, start_date, end_date)
+# replication.get_data()
+
+# @app.callback(
+#     [Output("tracking-error-graph", "figure"), Output("optimized-weights", "children")],
+#     [Input("run-tracking-error", "n_clicks")],
+# )
+# def update_tracking_error(n_clicks):
+#     # Check if the button has been clicked
+#     if n_clicks is None or n_clicks == 0:
+#         return dash.no_update
+#     else:
+#         try:
+#             # Optimize tracking error
+#             weights = replication.optimize_tracking_error()
+#             annualized_benchmark_return, annualized_portfolio_return = replication.compute_annualized_returns()
+
+#             # Create figure for tracking error
+#             fig = go.Figure()
+#             fig.add_trace(go.Scatter(
+#                 x=annualized_benchmark_return.index,
+#                 y=annualized_benchmark_return,
+#                 mode='lines',
+#                 name='Benchmark Returns',
+#             ))
+#             fig.add_trace(go.Scatter(
+#                 x=annualized_portfolio_return.index,
+#                 y=annualized_portfolio_return,
+#                 mode='lines',
+#                 name='Portfolio Returns',
+#             ))
+#             fig.update_layout(
+#                 title="Annualized Weekly Returns",
+#                 xaxis_title="Date",
+#                 yaxis_title="Return",
+#                 legend=dict(x=0.02, y=0.98),
+#                 template='plotly_white'
+#             )
+
+#             # Format optimized weights for display
+#             weights_display = html.Ul([
+#                 html.Li(f"{ticker}: {weight:.2%}") for ticker, weight in weights.items()
+#             ])
+
+#             return fig, weights_display
+
+#         except Exception as e:
+#             print(f"Error: {e}")
+#             return dash.no_update, html.Div(f"Error occurred during optimization: {e}", style={"color": "red"})
 
 
 if __name__ == '__main__':
