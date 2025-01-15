@@ -17,6 +17,7 @@ class Pricing:
         ticker = yf.Ticker(ticker_symbol)
 
         # Fetch the current price of the underlying asset
+        
         current_price = ticker.history(period="1d")['Close'].iloc[-1]
 
         # Fetch available expiration dates for the options
@@ -104,7 +105,7 @@ class Pricing:
         bounds = [(10**-4, 5)]  # Volatility should be in a reasonable range
 
         # Perform the minimization
-        result = minimize(objective, initial_guess, bounds=bounds, method='L-BFGS-B')
+        result = minimize(objective, initial_guess, bounds=bounds, method='SLSQP')
 
         # Check if the minimization was successful
         if result.success:

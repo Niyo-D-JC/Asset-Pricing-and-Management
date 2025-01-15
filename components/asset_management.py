@@ -57,8 +57,8 @@ class Management:
             self.sigma = filtered_returns.cov().to_numpy()
             self.sigma = 252 * self.sigma  # Ajustement annuel
 
-            self.assets = valid_assets
-        return self.mu, self.sigma
+            #self.assets = valid_assets
+        return self.mu, self.sigma, valid_assets
     
     def portfolio_variance(self, weights):
         return weights.T @ self.sigma @ weights

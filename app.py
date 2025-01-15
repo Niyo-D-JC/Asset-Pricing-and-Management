@@ -80,6 +80,10 @@ symbole_list = [
 ]
 
 symbole_list = list(set(symbole_list))
+
+management = Management(symbole_list)
+
+
 # Callback pour mettre à jour le contenu de la page en fonction du chemin d'URL
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
@@ -123,7 +127,6 @@ def update_graph(ticker_, close_error_clicks):
     # Tentative de récupération des données pour le ticker
     try:
         dta_ = yf.download(ticker_, start='2010-01-01')
-        print(dta_)
         if ticker_ is None or dta_.shape[0]<1:
             raise ValueError("Invalid ticker")
 
@@ -283,10 +286,7 @@ def remove_symbole(ticker):
 )
 def update_graph_portfolio(_):
     
-    global symbole_list
-
-    management = Management(symbole_list)
-    management.get_parameters(freq = "day")
+    _, _, symb_list = management.get_parameters(freq = "day")
 
     rf = 0.03
     # Rendements cibles
@@ -363,7 +363,7 @@ def update_graph_portfolio(_):
     )
 
     df_market_weights = pd.DataFrame({
-        'Symbol': management.assets,
+        'Symbol': symb_list,
         'Weight': np.round(market_weights, 5)
     })
     
