@@ -16,20 +16,20 @@ class Pricing:
 
     def get_data(self, ticker_symbol, columns_to_extract=['lastPrice', 'strike', 'volume', 'bid', 'ask']):
         ticker = yf.Ticker(ticker_symbol)
-
+        
         # Fetch the current price of the underlying asset
         current_price = ticker.history(period="1d")['Close'].iloc[-1]
 
         # Fetch available expiration dates for the options
         maturities = ticker.options
-
+        
         # Initialize an empty list to store DataFrames for each maturity
         options_data = []
 
         for maturity in maturities:
             # Fetch the options chain for the current maturity
             options_chain = ticker.option_chain(maturity)
-
+            
             # Extract Call and Put data, rename columns, and add maturity column
             calls = options_chain.calls[columns_to_extract].copy()
             calls.rename(columns={
