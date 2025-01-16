@@ -328,6 +328,7 @@ def compute_iv(r, option_type, K, T):
     # Mise en page en deux colonnes
     return dbc.Row([
         dbc.Col(html.Ul([
+            html.Li(f"S0: {S0:.2f}", style={"marginBottom": "10px"}),
             html.Li(f"Price: {price:.2f}", style={"marginBottom": "10px"}),
             html.Li(f"IV: {volatility:.2f}", style={"marginBottom": "10px"}),
             html.Li(f"Delta: {greeks['delta']:.2f}", style={"marginBottom": "10px"}),
