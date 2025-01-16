@@ -84,6 +84,51 @@ symbole_list = [
     "BTC-USD", # Bitcoin (Cryptomonnaie)
 ]
 
+
+stocks_dict = {
+    "AC.PA": "Accor",
+    "AI.PA": "Air Liquide",
+    "AIR.PA": "Airbus",
+    "MT.AS": "ArcelorMittal",
+    "CS.PA": "AXA",
+    "BNP.PA": "BNP Paribas",
+    "EN.PA": "Bouygues",
+    "BVI.PA": "Bureau Veritas",
+    "CAP.PA": "Capgemini",
+    "CA.PA": "Carrefour",
+    "ACA.PA": "Crédit Agricole",
+    "BN.PA": "Danone",
+    "DSY.PA": "Dassault Systèmes",
+    "EDEN.PA": "Edenred",
+    "ENGI.PA": "Engie",
+    "EL.PA": "EssilorLuxottica",
+    "ERF.PA": "Eurofins Scientific",
+    "RMS.PA": "Hermès",
+    "KER.PA": "Kering",
+    "LR.PA": "Legrand",
+    "OR.PA": "L'Oréal",
+    "MC.PA": "LVMH",
+    "ML.PA": "Michelin",
+    "ORA.PA": "Orange",
+    "RI.PA": "Pernod Ricard",
+    "PUB.PA": "Publicis",
+    "RNO.PA": "Renault",
+    "SAF.PA": "Safran",
+    "SGO.PA": "Saint-Gobain",
+    "SAN.PA": "Sanofi",
+    "SU.PA": "Schneider Electric",
+    "GLE.PA": "Société Générale",
+    "STLA": "Stellantis",
+    "STMPA.PA": "STMicroelectronics",
+    "TEP.PA": "Teleperformance",
+    "HO.PA": "Thales",
+    "TTE.PA": "TotalEnergies",
+    "UNBLF": "Unibail-Rodamco-Westfield",
+    "VIE.PA": "Veolia",
+    "DG.PA": "Vinci",
+}
+
+
 symbole_list = list(set(symbole_list))
 
 management = Management(symbole_list)
@@ -504,7 +549,7 @@ def remove_symbole(ticker):
      State("date-picker", "date"), State("risk-free", "value"), State("modal-xl-corr", "is_open")]
 )
 def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, open):
-    _, _, symb_list, corr_matrice = management.get_parameters(freq = type_freq, date_=date_)
+    mu_, _, symb_list, corr_matrice = management.get_parameters(freq = type_freq, date_=date_)
     rf = 0.03
     if (n_click>0) and (r_ != None):
         rf = r_
@@ -575,15 +620,16 @@ def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, o
 
     # Configurer le graphique
     fig.update_layout(
-        title='Extended CML with Market Portfolio',
+        title=f'Extended CML with Market Portfolio -- Vol = {market_volatility:.2f} & Return = {market_return:.2f}',
         xaxis_title='Volatility (Risk)',
-        yaxis_title='Yield-Return',
+        yaxis_title='Return',
         legend=dict(x=0.02, y=0.98),
         template='plotly_white'
     )
 
     df_market_weights = pd.DataFrame({
-        'Symbol': symb_list,
+        'Asset': symb_list,
+        'Return': np.round(mu_, 3),
         'Weight': np.round(market_weights, 5)
     })
 
@@ -680,7 +726,7 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency):
         )
 
         # Optimized Weights Data
-        weights_data = [{"Ticker": ticker, "Weight": round(weight * 100, 2)}
+        weights_data = [{"Ticker": stocks_dict[ticker],"Symbol": ticker, "Weight": round(weight * 100, 2)}
                         for ticker, weight in replication.weights_history[-1].items()]
 
         return fig_te, fig_ar, weights_data

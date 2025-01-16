@@ -165,11 +165,13 @@ class Analyse:
                                         id="optimized-weights-table",
                                         columns=[
                                             {"name": "Ticker", "id": "Ticker"},
+                                            {"name": "Symbol", "id": "Symbol"},
                                             {"name": "Weight (%)", "id": "Weight"},
                                         ],
                                         style_table={"overflowX": "auto"},
                                         style_cell={"textAlign": "center", "fontFamily": "Arial", "fontSize": "14px"},
                                         style_header={"fontWeight": "bold", "backgroundColor": "#f4f4f4"},
+                                        filter_action="native", filter_options={"placeholder_text": "Filter..."},
                                         page_size=10,
                                     ),
                                     ],
