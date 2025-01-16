@@ -97,20 +97,101 @@ class Analyse:
 
                                 ])
                     
-                        ]),
+                                        ]),
                 dcc.Tab(label='Tracking Error', children=[
-                        dbc.Row(
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                dbc.Card(
+                                    dbc.CardBody(
+                                        [
+                                            html.Label("Start Date", style={"fontWeight": "normal"}),
+                                            dcc.DatePickerSingle(
+                                                id="start-date-picker",
+                                                min_date_allowed=date(2000, 1, 1),
+                                                max_date_allowed=date.today(),
+                                                initial_visible_month=date(2020, 1, 1),
+                                                date=date(2020, 1, 1),
+                                                style={"fontWeight": "normal"}
+                                            ),
+                                            html.Br(),
+                                            html.Label("End Date", style={"fontWeight": "normal"}),
+                                            dcc.DatePickerSingle(
+                                                id="end-date-picker",
+                                                min_date_allowed=date(2000, 1, 1),
+                                                max_date_allowed=date.today(),
+                                                initial_visible_month=date.today(),
+                                                date=date.today(),
+                                                style={"fontWeight": "normal"}
+                                            ),
+                                            html.Br(),
+                                            html.Label("Data Frequency", style={"fontWeight": "normal"}),
+                                            dcc.Dropdown(
+                                                id="data-frequency",
+                                                options=[
+                                                    {"label": "Weekly", "value": "W"},
+                                                    {"label": "Monthly", "value": "M"},
+                                                ],
+                                                value="W",
+                                                placeholder="Select frequency",
+                                                style={"fontWeight": "normal"}
+                                            ),
+                                            html.Br(),
+                                            dbc.Button(
+                                                "Run Backtest",
+                                                id="run-backtest",
+                                                color="primary",
+                                                className="w-100",
+                                                n_clicks=1,
+                                            ),
+                                        ]
+                                    ),
+                                    className="mb-3",
+                                ),
+                                width=2,
+                            ),
+                            # Graph for Tracking Error
+                            dbc.Col(
                                 [
-                                    # dbc.Col([
-                                    #     dbc.Button("Run Tracking Error", id="run-tracking-error", className="btn btn-primary"),
-                                    #     html.Div(id="optimized-weights", style={"marginTop": "20px", "fontSize": "16px"}),
-                                    # ], width=3),
-                                    # dbc.Col([
-                                    #     dcc.Graph(id="tracking-error-graph"),  # Ensure height is sufficient
-                                    # ], width=9),
-                                ])
-                    
-                        ]),
+                                    dcc.Graph(id="tracking-error-graph"),
+                                ],
+                                width=5,
+                            ),
+                            # Graph for Annualized Returns
+                            dbc.Col(
+                                [
+                                    dcc.Graph(id="annualized-returns-graph"),
+                                ],
+                                width=5,
+                            ),
+                        ],
+                        className="mb-3",
+                    ),
+                    # Weights Table
+                    dbc.Row(
+                        [
+                            dbc.Col(
+                                [
+                                    html.H5("Optimized Portfolio Weights", style={"textAlign": "center"}),
+                                    dash_table.DataTable(
+                                        id="optimized-weights-table",
+                                        columns=[
+                                            {"name": "Ticker", "id": "Ticker"},
+                                            {"name": "Weight (%)", "id": "Weight"},
+                                        ],
+                                        style_table={"overflowX": "auto"},
+                                        style_cell={"textAlign": "center", "fontFamily": "Arial", "fontSize": "14px"},
+                                        style_header={"fontWeight": "bold", "backgroundColor": "#f4f4f4"},
+                                        page_size=10,
+                                    ),
+                                ],
+                                width=6,
+                            ),
+                        ],
+                    ),
+                ]),
+
+
                 dcc.Tab(label='Portfolio Management', children=[
                         dbc.Row(
                                 [   dbc.Col([

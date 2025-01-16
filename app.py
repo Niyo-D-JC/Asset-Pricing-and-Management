@@ -493,107 +493,87 @@ def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, o
 
 
 ################### TRACKING ERROR ####################
-# # ticker du cac 40
-# cac40_ticker = "^FCHI"
 
-# # tickers des composants du CAC 40
-# cac40_components_ticker = {
-#     "ACCOR": "AC.PA",
-#     "AIR LIQUIDE": "AI.PA",
-#     "AIRBUS GROUP": "AIR.PA",
-#     "ARCELORMITTAL": "MT.AS",
-#     "AXA": "CS.PA",
-#     "BNP PARIBAS": "BNP.PA",
-#     "BOUYGUES": "EN.PA",
-#     "BUREAU VERITAS": "BVI.PA",
-#     "CAPGEMINI": "CAP.PA",
-#     "CARREFOUR": "CA.PA",
-#     "CREDIT AGRICOLE": "ACA.PA",
-#     "DANONE": "BN.PA",
-#     "DASSAULT SYSTEMES": "DSY.PA",
-#     "EDENRED": "EDEN.PA",
-#     "ENGIE": "ENGI.PA",
-#     "ESSILORLUXOTTICA": "EL.PA",
-#     "EUROFINS SCIENTIFIC": "ERF.PA",
-#     "HERMES INTERNATIONAL": "RMS.PA",
-#     "KERING": "KER.PA",
-#     "LEGRAND": "LR.PA",
-#     "LOREAL": "OR.PA",
-#     "LVMH": "MC.PA",
-#     "MICHELIN": "ML.PA",
-#     "ORANGE": "ORA.PA",
-#     "PERNOD RICARD": "RI.PA",
-#     "PUBLICIS": "PUB.PA",
-#     "RENAULT": "RNO.PA",
-#     "SAFRAN": "SAF.PA",
-#     "SAINT-GOBAIN": "SGO.PA",
-#     "SANOFI": "SAN.PA",
-#     "SCHNEIDER ELECTRIC": "SU.PA",
-#     "SOCIETE GENERALE": "GLE.PA",
-#     "STELLANTIS": "STLA",
-#     "STMICROELECTRONICS": "STMPA.PA",
-#     "TELEPERFORMANCE": "TEP.PA",
-#     "THALES": "HO.PA",
-#     "TOTALENERGIES": "TTE.PA",
-#     "UNIBAIL-RODAMCO-WESTFIELD": "UNBLF",
-#     "VEOLIA ENVIRONNEMENT": "VIE.PA",
-#     "VINCI": "DG.PA"
+@app.callback(
+    [Output("tracking-error-graph", "figure"),
+     Output("annualized-returns-graph", "figure"),
+     Output("optimized-weights-table", "data")],
+    [Input("run-backtest", "n_clicks")],
+    [State("start-date-picker", "date"),
+     State("end-date-picker", "date"),
+     State("data-frequency", "value")]
+)
+def update_tracking_error(n_clicks, start_date, end_date, frequency):
+    if not n_clicks or n_clicks <= 0:
+        return dash.no_update, dash.no_update, []
 
-# }
+    try:
+        # Initialize IndexReplication instance
+        replication = IndexReplication(
+            index_ticker="^FCHI",
+            component_tickers=[
+                "AC.PA", "AI.PA", "AIR.PA", "MT.AS", "CS.PA", "BNP.PA", "EN.PA", "BVI.PA", 
+                "CAP.PA", "CA.PA", "ACA.PA", "BN.PA", "DSY.PA", "EDEN.PA", "ENGI.PA", 
+                "EL.PA", "ERF.PA", "RMS.PA", "KER.PA", "LR.PA", "OR.PA", "MC.PA", "ML.PA", 
+                "ORA.PA", "RI.PA", "PUB.PA", "RNO.PA", "SAF.PA", "SGO.PA", "SAN.PA", 
+                "SU.PA", "GLE.PA", "STLA", "STMPA.PA", "TEP.PA", "HO.PA", "TTE.PA", 
+                "UNBLF", "VIE.PA", "DG.PA"
+            ],
+            start_date=start_date,
+            end_date=end_date,
+            monthly=(frequency == "M")
+        )
 
-# cac40_tickers = list(cac40_components_ticker.values())
-# start_date = "2010-01-01"
-# end_date = "2024-12-31"
+        # Fetch data
+        replication.get_data()
 
-# replication = IndexReplication(cac40_ticker, cac40_tickers, start_date, end_date)
-# replication.get_data()
+        # Run backtest
+        tracking_df, annualized_portfolio_return, annualized_benchmark_return = replication.run_backtest()
+        # Convert `Tracking Error` to a DataFrame with clean floats
+        tracking_df["Tracking Error"] = tracking_df["Tracking Error"].apply(
+            lambda x: float(x.iloc[0]) if isinstance(x, pd.Series) else x
+        )
+        
 
-# @app.callback(
-#     [Output("tracking-error-graph", "figure"), Output("optimized-weights", "children")],
-#     [Input("run-tracking-error", "n_clicks")],
-# )
-# def update_tracking_error(n_clicks):
-#     # Check if the button has been clicked
-#     if n_clicks is None or n_clicks == 0:
-#         return dash.no_update
-#     else:
-#         try:
-#             # Optimize tracking error
-#             weights = replication.optimize_tracking_error()
-#             annualized_benchmark_return, annualized_portfolio_return = replication.compute_annualized_returns()
+        # Create Tracking Error Graph
+        fig_te = go.Figure()
+        fig_te.add_trace(go.Scatter(
+            x=tracking_df["Year"], y=tracking_df["Tracking Error"],
+            mode="lines+markers", name="Tracking Error"
+        ))
+        fig_te.update_layout(
+            title="Tracking Error by Year",
+            xaxis_title="Year",
+            yaxis_title="Tracking Error",
+            template="plotly_white"
+        )
 
-#             # Create figure for tracking error
-#             fig = go.Figure()
-#             fig.add_trace(go.Scatter(
-#                 x=annualized_benchmark_return.index,
-#                 y=annualized_benchmark_return,
-#                 mode='lines',
-#                 name='Benchmark Returns',
-#             ))
-#             fig.add_trace(go.Scatter(
-#                 x=annualized_portfolio_return.index,
-#                 y=annualized_portfolio_return,
-#                 mode='lines',
-#                 name='Portfolio Returns',
-#             ))
-#             fig.update_layout(
-#                 title="Annualized Weekly Returns",
-#                 xaxis_title="Date",
-#                 yaxis_title="Return",
-#                 legend=dict(x=0.02, y=0.98),
-#                 template='plotly_white'
-#             )
+        # Create Annualized Returns Graph
+        fig_ar = go.Figure()
+        fig_ar.add_trace(go.Scatter(
+            x=annualized_portfolio_return.index, y=annualized_portfolio_return,
+            mode="lines", name="Portfolio Returns"
+        ))
+        fig_ar.add_trace(go.Scatter(
+            x=annualized_benchmark_return["^FCHI"].index,y=annualized_benchmark_return["^FCHI"].values,
+            mode="lines",
+            name="Benchmark Annualized Return"
+        ))
+        fig_ar.update_layout(
+            title="Annualized Returns",
+            xaxis_title="Date",
+            yaxis_title="Return",
+            template="plotly_white"
+        )
 
-#             # Format optimized weights for display
-#             weights_display = html.Ul([
-#                 html.Li(f"{ticker}: {weight:.2%}") for ticker, weight in weights.items()
-#             ])
+        # Optimized Weights Data
+        weights_data = [{"Ticker": ticker, "Weight": round(weight * 100, 2)}
+                        for ticker, weight in replication.weights_history[-1].items()]
 
-#             return fig, weights_display
-
-#         except Exception as e:
-#             print(f"Error: {e}")
-#             return dash.no_update, html.Div(f"Error occurred during optimization: {e}", style={"color": "red"})
+        return fig_te, fig_ar, weights_data
+    except Exception as e:
+        print(f"Error during callback execution: {e}")
+        return dash.no_update, dash.no_update, [{"Ticker": "Error", "Weight": str(e)}]
 
 
 if __name__ == '__main__':
