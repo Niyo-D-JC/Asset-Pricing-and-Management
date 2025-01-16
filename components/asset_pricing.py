@@ -171,10 +171,10 @@ class Pricing:
 
         # Interpoler la volatilité implicite à (K_target, T_target)
         points = np.column_stack((strikes, maturities))
-        vol_target = griddata(points, volatilities, (K_target, T_target), method='cubic')
+        vol_target = griddata(points, volatilities, (K_target, T_target))
 
         if np.isnan(vol_target):
-            raise ValueError("L'interpolation a échoué. Vérifiez les données disponibles.")
+            vol_target = griddata(points, volatilities, (K_target, T_target), method='nearest')
 
         # Calculer le prix de l'option avec Black-Scholes
         d1 = (np.log(S / K_target) + (r + 0.5 * vol_target**2) * T_target) / (vol_target * np.sqrt(T_target))
@@ -205,9 +205,6 @@ class Pricing:
         Returns:
             float: Delta of the option.
         """
-        if T <= 0 or sigma <= 0:
-            raise ValueError("T and sigma must be greater than 0.")
-
         d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
         if option_type == "call":
             return norm.cdf(d1)
@@ -216,7 +213,7 @@ class Pricing:
         else:
             raise ValueError("Invalid option type. Use 'call' or 'put'.")
 
-    def gamma_greek(self, K, T, S, sigma, r=0.03):
+    def gamma_greek(self, K, T, S, sigma, r=0.03, option_type="call"):
         """
         Calculate the Gamma Greek for an option.
 
@@ -230,13 +227,10 @@ class Pricing:
         Returns:
             float: Gamma of the option.
         """
-        if T <= 0 or sigma <= 0:
-            raise ValueError("T and sigma must be greater than 0.")
-
         d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
         return norm.pdf(d1) / (S * sigma * np.sqrt(T))
 
-    def vega_greek(self, K, T, S, sigma, r=0.03):
+    def vega_greek(self, K, T, S, sigma, r=0.03, option_type="call"):
         """
         Calculate the Vega Greek for an option.
 
@@ -250,9 +244,6 @@ class Pricing:
         Returns:
             float: Vega of the option.
         """
-        if T <= 0 or sigma <= 0:
-            raise ValueError("T and sigma must be greater than 0.")
-
         d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
         return S * norm.pdf(d1) * np.sqrt(T)
 
@@ -271,9 +262,6 @@ class Pricing:
         Returns:
             float: Theta of the option.
         """
-        if T <= 0 or sigma <= 0:
-            raise ValueError("T and sigma must be greater than 0.")
-
         d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
         d2 = d1 - sigma * np.sqrt(T)
 

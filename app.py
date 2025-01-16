@@ -23,6 +23,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+from plotly.subplots import make_subplots
 # Initialisation du chemin permettant le lancement de l'application
 # Définition du chemin de base pour l'application Dash en utilisant une variable d'environnement pour l'utilisateur
 
@@ -153,6 +154,106 @@ def plot_3d_surface(pricing_data, column_name):
     return fig
 
 
+def plot_3d_and_2d(pricing_data, column_name, greek_function, greek_name="Greek", option_type="call"):
+    """
+    Crée un graphique 3D à gauche et un graphique 2D à droite avec Plotly.
+    
+    Arguments :
+    pricing_data (pd.DataFrame) : DataFrame contenant 'K', 'T', 'S', 'sigma' et une colonne de valeurs (par exemple 'IV').
+    column_name (str) : Le nom de la colonne à tracer sur l'axe Z (par exemple 'IV') dans le graphique 3D.
+    greek_function (callable) : Fonction pour calculer le Greek.
+    greek_name (str) : Nom du Greek pour l'étiquetage dans le graphique 2D.
+    option_type (str) : Type d'option, soit "call" soit "put".
+    
+    Retourne :
+    go.Figure : Un graphique Plotly avec deux sous-graphiques.
+    """
+    # Vérification des colonnes nécessaires
+    if not all(col in pricing_data.columns for col in ["K", "T", "S", "IV", column_name]):
+        raise ValueError("Les colonnes 'K', 'T', 'S', 'IV', et '{column_name}' doivent être présentes dans le DataFrame.")
+    
+    # Extraction des données pour le 3D
+    strikes = pricing_data["K"].values
+    maturities = pricing_data["T"].values
+    z_values = pricing_data[column_name].values
+
+    # Création du graphique 3D (Surface)
+    surface = go.Mesh3d(
+        x=strikes,
+        y=maturities,
+        z=z_values,
+        colorbar_title=column_name,
+        colorscale='Viridis',
+        intensity=z_values,
+        showscale=True,
+        opacity=0.9,
+        name="3D Surface"
+    )
+
+    # Sélection des strikes et maturités pour le 2D
+    unique_strikes = np.linspace(pricing_data['K'].values.min(), pricing_data['K'].values.max(), 15)
+    selected_maturities = [0.0, 0.5, 1.0, 1.5]  # Maturités spécifiées
+    
+    # Création des courbes 2D (projection)
+    greek_lines = []
+    for T in selected_maturities:
+        greek_values = []
+        for K in unique_strikes:
+            S_value = pricing.price
+            S_, sigma_value = pricing.price_option_by_interpolation(K, T, S_value, option_type=option_type)
+            #print(sigma_value)
+                                
+            greek_values.append(greek_function(K, T, S_value, sigma_value, option_type=option_type))
+            
+        # Ajout de la courbe pour cette maturité
+        greek_lines.append(go.Scatter(
+            x=unique_strikes,
+            y=greek_values,
+            mode="lines",  # Seulement lignes continues
+            name=f"T={T:.2f}",  # Nom de la courbe
+            line=dict(width=2)
+        ))
+
+    # Création du layout avec deux graphiques côte à côte
+    fig = make_subplots(
+        rows=1, cols=2,
+        column_widths=[0.6, 0.4],  # Taille relative des colonnes
+        specs=[[{"type": "surface"}, {"type": "xy"}]],  # Définit le type de chaque colonne
+        subplot_titles=("3D Surface", "2D Greeks")
+    )
+
+    # Ajout du 3D à gauche
+    fig.add_trace(surface, row=1, col=1)
+
+    # Ajout des lignes 2D à droite
+    for line in greek_lines:
+        fig.add_trace(line, row=1, col=2)
+
+    # Mise en page globale
+    fig.update_layout(
+        title=f"3D Surface et 2D Greeks ({greek_name})",
+        scene=dict(  # Configuration pour le graphique 3D
+            xaxis_title="Strike Price (K)",
+            yaxis_title="Maturity (T in years)",
+            zaxis_title=column_name,
+        ),
+        xaxis2=dict(title="Strike Price (K)"),  # Configuration pour l'axe X du graphique 2D
+        yaxis2=dict(title=f"Valeur de {greek_name}"),  # Configuration pour l'axe Y du graphique 2D
+        height=700,
+        width=1000,
+        legend=dict(  # Configuration de la légende
+            groupclick="toggleitem",
+            x=1.15,  # Légende des courbes 2D à droite
+            y=1,
+            title=dict(text="Courbes 2D")
+        )
+    )
+
+    return fig
+
+
+
+
 # Callback pour mettre à jour le contenu de la page en fonction du chemin d'URL
 @app.callback(Output("page-content", "children"), [Input("url", "pathname")])
 def render_page_content(pathname):
@@ -212,6 +313,10 @@ def update_graph(ticker_, close_error_clicks):
         
         fig.add_trace(go.Scatter(x=dta_.index, y=dta_['Close'], mode='lines', name='Close'))
         
+        fig.update_layout(
+        title=f'{ticker_} Closing Price Evolution',
+    )
+        
         return fig, False
     
     except Exception:
@@ -269,15 +374,15 @@ def handle_button_click(n_clicks, risk, is_open, option_type):
         graph = dcc.Tabs([
                 dcc.Tab(label='Delta', children=[
                         dbc.Row(
-                                [
-                                    dcc.Graph(figure=plot_3d_surface(pricing.data, "Delta")),
+                                [   
+                                    dcc.Graph(figure=plot_3d_and_2d(pricing.data, "Delta", pricing.delta_greek, greek_name="Greek")),
                                 ])
                     
                         ]),
                 dcc.Tab(label='Gamma', children=[
                         dbc.Row(
-                                [
-                                    dcc.Graph(figure=plot_3d_surface(pricing.data, "Gamma")),
+                                [   
+                                    dcc.Graph(figure=plot_3d_and_2d(pricing.data, "Gamma", pricing.gamma_greek, greek_name="Greek")),
                                 ])
                     
                         ]),
@@ -285,14 +390,14 @@ def handle_button_click(n_clicks, risk, is_open, option_type):
                 dcc.Tab(label='Vega', children=[
                         dbc.Row(
                                 [
-                                    dcc.Graph(figure=plot_3d_surface(pricing.data, "Vega")),
+                                    dcc.Graph(figure=plot_3d_and_2d(pricing.data, "Vega", pricing.vega_greek, greek_name="Greek")),
                                 ])
                     
                         ]),
                 dcc.Tab(label='Theta', children=[
                         dbc.Row(
                                 [
-                                    dcc.Graph(figure=plot_3d_surface(pricing.data, "Theta")),
+                                    dcc.Graph(figure=plot_3d_and_2d(pricing.data, "Theta", pricing.theta_greek, greek_name="Greek")),
                                 ])
                     
                         ]),

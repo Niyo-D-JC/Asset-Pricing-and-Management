@@ -86,8 +86,7 @@ class Analyse:
                                             ), width=12)
                                         )
                                     ], width=3),
-                                    
-                                    
+    
                                 ])
                     
                         ]),
