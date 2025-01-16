@@ -91,7 +91,7 @@ class Analyse:
                                 ])
                     
                         ]),
-                dcc.Tab(label='Princing Taux Vanille', children=[
+                dcc.Tab(label='Pricing Taux Vanille', children=[
                         dbc.Row(
                                 [
 
