@@ -587,7 +587,7 @@ def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, o
         x=sml_volatilities, 
         y=mu_targets,
         mode='lines',
-        name='Efficient border',
+        name='Efficient frontier',
         line=dict(color='blue')
     ))
 
