@@ -91,7 +91,7 @@ class Analyse:
                                 ])
                     
                         ]),
-                dcc.Tab(label='Zero Coupon Rate', children=[
+                dcc.Tab(label='Princing Taux Vanille', children=[
                         dbc.Row(
                                 [
 
