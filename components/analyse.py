@@ -100,31 +100,44 @@ class Analyse:
                                         ]),
                 dcc.Tab(label='Tracking Error', children=[
                     dbc.Row(
-                        [
-                            dbc.Col(
+                        [   
+                            dbc.Col([
+                                html.Br(),
                                 dbc.Card(
                                     dbc.CardBody(
+                                        [   dbc.Row(
                                         [
-                                            html.Label("Start Date", style={"fontWeight": "normal"}),
-                                            dcc.DatePickerSingle(
-                                                id="start-date-picker",
-                                                min_date_allowed=date(2000, 1, 1),
-                                                max_date_allowed=date.today(),
-                                                initial_visible_month=date(2020, 1, 1),
-                                                date=date(2020, 1, 1),
-                                                style={"fontWeight": "normal"}
+                                            dbc.Col(
+                                                [
+                                                    html.Label("Start Date: ", style={"fontWeight": "normal", "marginRight": "10px"}),
+                                                    dcc.DatePickerSingle(
+                                                        id="start-date-picker",
+                                                        min_date_allowed=date(2010, 1, 1),
+                                                        max_date_allowed=date.today(),
+                                                        initial_visible_month=date(2020, 1, 1),
+                                                        date=date(2020, 1, 1),
+                                                        style={"fontWeight": "normal"}
+                                                    ),
+                                                ],
+                                                width="auto"  # Ajuste la largeur au contenu
                                             ),
-                                            html.Br(),
-                                            html.Label("End Date", style={"fontWeight": "normal"}),
-                                            dcc.DatePickerSingle(
-                                                id="end-date-picker",
-                                                min_date_allowed=date(2000, 1, 1),
-                                                max_date_allowed=date.today(),
-                                                initial_visible_month=date.today(),
-                                                date=date.today(),
-                                                style={"fontWeight": "normal"}
+                                            dbc.Col(
+                                                [
+                                                    html.Label("End Date: ", style={"fontWeight": "normal", "marginRight": "10px"}),
+                                                    dcc.DatePickerSingle(
+                                                        id="end-date-picker",
+                                                        min_date_allowed=date(2010, 1, 1),
+                                                        max_date_allowed=date.today(),
+                                                        initial_visible_month=date.today(),
+                                                        date=date.today(),
+                                                        style={"fontWeight": "normal"}
+                                                    ),
+                                                ],
+                                                width="auto",  # Ajuste la largeur au contenu
                                             ),
-                                            html.Br(),
+                                        ],
+                                        justify="between"  # Place les colonnes aux extrémités
+                                    ),
                                             html.Label("Data Frequency", style={"fontWeight": "normal"}),
                                             dcc.Dropdown(
                                                 id="data-frequency",
@@ -148,31 +161,7 @@ class Analyse:
                                     ),
                                     className="mb-3",
                                 ),
-                                width=2,
-                            ),
-                            # Graph for Tracking Error
-                            dbc.Col(
-                                [
-                                    dcc.Graph(id="tracking-error-graph"),
-                                ],
-                                width=5,
-                            ),
-                            # Graph for Annualized Returns
-                            dbc.Col(
-                                [
-                                    dcc.Graph(id="annualized-returns-graph"),
-                                ],
-                                width=5,
-                            ),
-                        ],
-                        className="mb-3",
-                    ),
-                    # Weights Table
-                    dbc.Row(
-                        [
-                            dbc.Col(
-                                [
-                                    html.H5("Optimized Portfolio Weights", style={"textAlign": "center"}),
+                                html.H5("Optimized Portfolio Weights", style={"textAlign": "center"}),
                                     dash_table.DataTable(
                                         id="optimized-weights-table",
                                         columns=[
@@ -184,11 +173,65 @@ class Analyse:
                                         style_header={"fontWeight": "bold", "backgroundColor": "#f4f4f4"},
                                         page_size=10,
                                     ),
-                                ],
+                                    ],
+                                width=6,
+                            ),
+                            # Graph for Tracking Error
+                            dbc.Col(
+                                [   html.Br(),
+                                    dcc.Tabs(
+                                            [
+                                                dcc.Tab(
+                                                    label='Tracking Error',
+                                                    children=[
+                                                        dbc.Row(
+                                                            [
+                                                                dcc.Graph(id="tracking-error-graph"),
+                                                            ]
+                                                        )
+                                                    ],
+                                                    style={
+                                                        "backgroundColor": "#f9f9f9",
+                                                        "color": "#28A745",
+                                                    },
+                                                    selected_style={
+                                                        "backgroundColor": "#28A745",
+                                                        "color": "#ffffff",
+                                                        "fontWeight": "bold",
+                                                    },
+                                                ),
+                                                dcc.Tab(
+                                                    label='Annualized Returns',
+                                                    children=[
+                                                        dbc.Row(
+                                                            [
+                                                                dcc.Graph(id="annualized-returns-graph"),
+                                                            ]
+                                                        )
+                                                    ],
+                                                    style={
+                                                        "backgroundColor": "#f9f9f9",
+                                                        "color": "#28A745",
+                                                    },
+                                                    selected_style={
+                                                        "backgroundColor": "#28A745",
+                                                        "color": "#ffffff",
+                                                        "fontWeight": "bold",
+                                                    },
+                                                ),
+                                            ],
+                                            style={
+                                                "border": "1px solid #dcdcdc",  # Bordure autour des onglets
+                                                "backgroundColor": "#f1f1f1",  # Couleur de fond des onglets
+                                            },
+                                        )
+
+                                    ],
                                 width=6,
                             ),
                         ],
-                    ),
+                        className="mb-3",
+                    )
                 ]),
 
 

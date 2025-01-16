@@ -87,6 +87,22 @@ symbole_list = list(set(symbole_list))
 
 management = Management(symbole_list)
 
+replication = IndexReplication(
+            index_ticker="^FCHI",
+            component_tickers=[
+                "AC.PA", "AI.PA", "AIR.PA", "MT.AS", "CS.PA", "BNP.PA", "EN.PA", "BVI.PA", 
+                "CAP.PA", "CA.PA", "ACA.PA", "BN.PA", "DSY.PA", "EDEN.PA", "ENGI.PA", 
+                "EL.PA", "ERF.PA", "RMS.PA", "KER.PA", "LR.PA", "OR.PA", "MC.PA", "ML.PA", 
+                "ORA.PA", "RI.PA", "PUB.PA", "RNO.PA", "SAF.PA", "SGO.PA", "SAN.PA", 
+                "SU.PA", "GLE.PA", "STLA", "STMPA.PA", "TEP.PA", "HO.PA", "TTE.PA", 
+                "UNBLF", "VIE.PA", "DG.PA"
+            ],
+            start_date="2010-01-01",
+            end_date=datetime.today().strftime('%Y-%m-%d'),
+        )
+
+# Fetch data
+replication.get_data()
 
 def plot_3d_surface(pricing_data, column_name):
     """
@@ -515,23 +531,8 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency):
 
     try:
         # Initialize IndexReplication instance
-        replication = IndexReplication(
-            index_ticker="^FCHI",
-            component_tickers=[
-                "AC.PA", "AI.PA", "AIR.PA", "MT.AS", "CS.PA", "BNP.PA", "EN.PA", "BVI.PA", 
-                "CAP.PA", "CA.PA", "ACA.PA", "BN.PA", "DSY.PA", "EDEN.PA", "ENGI.PA", 
-                "EL.PA", "ERF.PA", "RMS.PA", "KER.PA", "LR.PA", "OR.PA", "MC.PA", "ML.PA", 
-                "ORA.PA", "RI.PA", "PUB.PA", "RNO.PA", "SAF.PA", "SGO.PA", "SAN.PA", 
-                "SU.PA", "GLE.PA", "STLA", "STMPA.PA", "TEP.PA", "HO.PA", "TTE.PA", 
-                "UNBLF", "VIE.PA", "DG.PA"
-            ],
-            start_date=start_date,
-            end_date=end_date,
-            monthly=(frequency == "M")
-        )
-
-        # Fetch data
-        replication.get_data()
+        replication.monthly = (frequency == "M")
+        replication.get_sub_data(start_date, end_date)
 
         # Run backtest
         tracking_df, annualized_portfolio_return, annualized_benchmark_return = replication.run_backtest()

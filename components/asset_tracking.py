@@ -36,6 +36,29 @@ class IndexReplication:
         self.portfolio_data = data
         self.benchmark_data = index
         return self.data
+    
+    def get_sub_data(self, start_date, end_date):
+        """
+        Fetch historical data for the index and its components.
+        """
+        data = self.data["portfolio_data"].loc[
+            (self.data["portfolio_data"].index > start_date) & 
+            (self.data["portfolio_data"].index <= end_date)
+        ]
+        index = self.data["benchmark_data"].loc[
+            (self.data["benchmark_data"].index > start_date) & 
+            (self.data["benchmark_data"].index <= end_date)
+        ]
+
+        if self.monthly:
+            data = data.resample('M').last()
+            index = index.resample('M').last()
+        else:
+            data = data.resample('W-FRI').last()
+            index = index.resample('W-FRI').last()
+
+        self.portfolio_data = data
+        self.benchmark_data = index
 
     @staticmethod
     def calculate_tracking_error(weights, benchmark_returns, portfolio_returns, rho_b_p=1, period=52):
