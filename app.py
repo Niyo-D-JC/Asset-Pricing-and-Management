@@ -175,6 +175,7 @@ def update_option(value):
 )
 def update_graph(ticker_, close_error_clicks):
     # Détection si la fermeture du popup est cliquée
+
     if ctx.triggered_id == "close-error-popup":
         return dash.no_update, False
     # Tentative de récupération des données pour le ticker
@@ -182,9 +183,14 @@ def update_graph(ticker_, close_error_clicks):
         dta_ = yf.download(ticker_, start='2010-01-01')
         if ticker_ is None or dta_.shape[0]<1:
             raise ValueError("Invalid ticker")
-
-        dta_.columns = ['Close', 'High', 'Low', 'Open', 'Volume']
+        
+        if len(dta_.columns) == 5: 
+            dta_.columns = ['Close', 'High', 'Low', 'Open', 'Volume']
+        else:
+            dta_.columns = ['Adj Close','Close', 'High', 'Low', 'Open', 'Volume']
+           
         pricing.get_data(ticker_)
+        
         pricing.price = float(dta_['Close'].values[-1]) 
         fig = go.Figure()
         
