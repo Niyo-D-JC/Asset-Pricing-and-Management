@@ -708,7 +708,11 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency):
             title="CAC 40 tracking error by year",
             xaxis_title="Year",
             yaxis_title="Tracking Error",
-            template="plotly_white"
+            template="plotly_white",
+            xaxis=dict(
+                tickmode='linear',  # Assure un espacement constant des ticks
+                dtick=1  # Progression d'une unité
+            )
         )
 
         # Create Annualized Returns Graph

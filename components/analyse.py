@@ -108,7 +108,7 @@ class Analyse:
                                         [
                                             dbc.Col(
                                                 [
-                                                    html.Label("Start Date: ", style={"fontWeight": "normal", "marginRight": "10px"}),
+                                                    html.Label("Start: ", style={"fontWeight": "normal", "marginRight": "10px"}),
                                                     dcc.DatePickerSingle(
                                                         id="start-date-picker",
                                                         min_date_allowed=date(2010, 1, 1),
@@ -122,7 +122,7 @@ class Analyse:
                                             ),
                                             dbc.Col(
                                                 [
-                                                    html.Label("End Date: ", style={"fontWeight": "normal", "marginRight": "10px"}),
+                                                    html.Label("End: ", style={"fontWeight": "normal", "marginRight": "10px"}),
                                                     dcc.DatePickerSingle(
                                                         id="end-date-picker",
                                                         min_date_allowed=date(2010, 1, 1),
