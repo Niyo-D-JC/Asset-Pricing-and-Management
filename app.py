@@ -83,7 +83,11 @@ symbole_list = [
     "VNQ",   # Vanguard Real Estate ETF (Immobilier)
     "BTC-USD", # Bitcoin (Cryptomonnaie)
 ]
-
+"""
+symbole_list = ["ADBE", "FIX", "LLY", "WELL", "UTHR", "HIG", "PGR", "PANW", "DOGE-USD", "SFM", "JKHY", "MRK", 
+                "LDOS", "PCAR", "MSFT", "AMD", "NVDA", "AVAV", "AAPL", "EME", "JPM", "GOOGL", "GOOG", "META",
+                "AMZN", "TSLA", "AVGO"]
+"""
 
 stocks_dict = {
     "AC.PA": "Accor",
