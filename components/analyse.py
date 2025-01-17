@@ -202,7 +202,7 @@ class Analyse:
                                                     },
                                                 ),
                                                 dcc.Tab(
-                                                    label='Annualized Returns',
+                                                    label='Backtest',
                                                     children=[
                                                         dbc.Row(
                                                             [
