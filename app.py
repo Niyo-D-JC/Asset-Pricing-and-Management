@@ -559,18 +559,21 @@ def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, o
         rf = r_
 
     # Rendements cibles
-    mu_targets = np.linspace(0.01, 0.2, 100)
+    mu_targets_ = np.linspace(0.01, 0.2, 100)
     sml_volatilities = []
     sml_weights = []
+    mu_targets = []
 
     # Calcul de la frontière efficiente
-    for mu_target in mu_targets:
+    for mu_target in mu_targets_:
         vol, weights = management.efficient_portfolio(mu_target, range_= (inf_w, sup_w))
         if vol is not None and weights is not None:
             sml_volatilities.append(vol)
             sml_weights.append(weights)
+            mu_targets.append(mu_target)
 
     # Identifier le portefeuille tangent (maximisation du ratio de Sharpe)
+    print(np.array(mu_targets).shape, np.array(sml_volatilities).shape)
     sharpe_ratios = (np.array(mu_targets) - rf) / np.array(sml_volatilities)
     market_index = np.argmax(sharpe_ratios)
     market_volatility = sml_volatilities[market_index]
