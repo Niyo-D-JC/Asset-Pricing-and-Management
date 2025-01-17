@@ -175,7 +175,7 @@ class Analyse:
                                         page_size=10,
                                     ),
                                     ],
-                                width=6,
+                                width=4,
                             ),
                             # Graph for Tracking Error
                             dbc.Col(
@@ -202,7 +202,7 @@ class Analyse:
                                                     },
                                                 ),
                                                 dcc.Tab(
-                                                    label='Annualized Returns',
+                                                    label='Backtest',
                                                     children=[
                                                         dbc.Row(
                                                             [
@@ -228,7 +228,7 @@ class Analyse:
                                         )
 
                                     ],
-                                width=6,
+                                width=8,
                             ),
                         ],
                         className="mb-3",

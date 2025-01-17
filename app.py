@@ -705,7 +705,7 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency):
             mode="lines+markers", name="Tracking Error"
         ))
         fig_te.update_layout(
-            title="Tracking Error by Year",
+            title="CAC 40 tracking error by year",
             xaxis_title="Year",
             yaxis_title="Tracking Error",
             template="plotly_white"
@@ -720,10 +720,10 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency):
         fig_ar.add_trace(go.Scatter(
             x=annualized_benchmark_return["^FCHI"].index,y=annualized_benchmark_return["^FCHI"].values,
             mode="lines",
-            name="Benchmark Annualized Return"
+            name="Benchmark Returns"
         ))
         fig_ar.update_layout(
-            title="Annualized Returns",
+            title="CAC 40 replication backtest",
             xaxis_title="Date",
             yaxis_title="Return",
             template="plotly_white"
