@@ -37,7 +37,7 @@ class Analyse:
                                     dbc.Col([dcc.Graph(id='ticker-pricing-graph'), html.Div(id="output-greeks")], width=9),
                                     dbc.Col([html.Br(), 
                                              
-                                        dbc.Row([
+                                    dbc.Row([
                                             dbc.Col([
                                                 html.H6("Choose the Ticker :", style={"color": "#2c3e50", "fontWeight": "normal" }) ,
                                             ], width=6),
@@ -106,10 +106,81 @@ class Analyse:
                                 ])
                     
                         ]),
-                dcc.Tab(label='Pricing Taux Vanille', children=[
+                dcc.Tab(label='Vanilla Rate Pricing and Exotic Options', children=[
                         dbc.Row(
                                 [
+                                    dbc.Col(
+                                [   html.Br(),
+                                    dcc.Tabs(
+                                            [
+                                                dcc.Tab(
+                                                    label='Vanilla Rate',
+                                                    children=[
+                                                        dbc.Row(
+                                                            [
+                                                                
+                                                            ]
+                                                        )
+                                                    ],
+                                                    style={
+                                                        "backgroundColor": "#f9f9f9",
+                                                        "color": "#28A745",
+                                                    },
+                                                    selected_style={
+                                                        "backgroundColor": "#28A745",
+                                                        "color": "#ffffff",
+                                                        "fontWeight": "bold",
+                                                    },
+                                                ),
+                                                dcc.Tab(
+                                                    label='Barrier Options',
+                                                    children=[
+                                                        dbc.Row(
+                                                            [
+                                                                
+                                                            ]
+                                                        )
+                                                    ],
+                                                    style={
+                                                        "backgroundColor": "#f9f9f9",
+                                                        "color": "#28A745",
+                                                    },
+                                                    selected_style={
+                                                        "backgroundColor": "#28A745",
+                                                        "color": "#ffffff",
+                                                        "fontWeight": "bold",
+                                                    },
+                                                ),
+                                                dcc.Tab(
+                                                    label='Asian Options',
+                                                    children=[
+                                                        dbc.Row(
+                                                            [
+                                                                
+                                                            ]
+                                                        )
+                                                    ],
+                                                    style={
+                                                        "backgroundColor": "#f9f9f9",
+                                                        "color": "#28A745",
+                                                    },
+                                                    selected_style={
+                                                        "backgroundColor": "#28A745",
+                                                        "color": "#ffffff",
+                                                        "fontWeight": "bold",
+                                                    },
+                                                ),
+                                                
+                                            ],
+                                            style={
+                                                "border": "1px solid #dcdcdc",  # Bordure autour des onglets
+                                                "backgroundColor": "#f1f1f1",  # Couleur de fond des onglets
+                                            },
+                                        )
 
+                                    ],
+                                width=12,
+                            ),
                                 ])
                     
                                         ]),
