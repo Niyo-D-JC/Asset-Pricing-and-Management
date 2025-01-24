@@ -83,11 +83,6 @@ symbole_list = [
     "VNQ",   # Vanguard Real Estate ETF (Immobilier)
     "BTC-USD", # Bitcoin (Cryptomonnaie)
 ]
-"""
-symbole_list = ["ADBE", "FIX", "LLY", "WELL", "UTHR", "HIG", "PGR", "PANW", "DOGE-USD", "SFM", "JKHY", "MRK", 
-                "LDOS", "PCAR", "MSFT", "AMD", "NVDA", "AVAV", "AAPL", "EME", "JPM", "GOOGL", "GOOG", "META",
-                "AMZN", "TSLA", "AVGO"]
-"""
 
 stocks_dict = {
     "AC.PA": "Accor",
@@ -356,6 +351,7 @@ def update_graph(ticker_, close_error_clicks):
             dta_.columns = ['Adj Close','Close', 'High', 'Low', 'Open', 'Volume']
            
         pricing.get_data(ticker_)
+        pricing.ticker = ticker_
         
         pricing.price = float(dta_['Close'].values[-1]) 
         fig = go.Figure()
@@ -383,12 +379,17 @@ def update_graph(ticker_, close_error_clicks):
 @app.callback(
     [Output("modal-xl", "is_open"), Output("volatility-graph", "figure"), Output("output-greeks", "children")],
     [Input("open-volatility", "n_clicks"), Input("risk-free", "value")],
-    [State("modal-xl", "is_open"), State("standalone-switch", "value")]
+    [State("modal-xl", "is_open"), State('ticker-symbole', 'value'), State("standalone-switch", "value")]
 )
-def handle_button_click(n_clicks, risk, is_open, option_type):
+def compute_iv_button(n_clicks, risk, is_open, ticker, option_type):
     if n_clicks > 0:
         # Vérifier si la colonne "Volatilité" existe, sinon la calculer
-        pricing.compute_iv(risk)
+        if "IV" not in pricing.data.columns or ticker != pricing.ticker:
+            if risk == None:
+                risk = 0.03
+            pricing.compute_iv(risk)
+            pricing.calculate_greeks(risk, option_type=options_dict_value[option_type])
+
         pricing.data = pricing.data.dropna(subset=['T', 'K', 'IV'])
 
         strikes = pricing.data["K"].values
@@ -419,7 +420,6 @@ def handle_button_click(n_clicks, risk, is_open, option_type):
             width=800
         )
 
-        pricing.calculate_greeks(risk, option_type=options_dict_value[option_type])
         graph = dcc.Tabs([
                 dcc.Tab(label='Delta', children=[
                         dbc.Row(
@@ -459,14 +459,14 @@ def handle_button_click(n_clicks, risk, is_open, option_type):
 
 
 @app.callback(
-    Output("output-div", "children"),
+    [Output("output-div", "children"), Output("open-interpol", "disabled")],
     State("risk-free", "value"),
     State("standalone-switch", "value"),
     State("input-K", "value"),
     Input("input-T", "value"),
     prevent_initial_call=True
 )
-def compute_iv(r, option_type, K, T):
+def interpole_iv(r, option_type, K, T):
     if K is None or T is None:
         return dbc.Alert("Please provide valid inputs for K and T.", color="danger")
     if "IV" not in pricing.data.columns:
@@ -480,7 +480,7 @@ def compute_iv(r, option_type, K, T):
     greeks = pricing.compute_greeks(K, T, S0, volatility, r=r, option_type=options_dict_value[option_type]) 
 
     # Mise en page en deux colonnes
-    return dbc.Row([
+    greeks_child = dbc.Row([
         dbc.Col(html.Ul([
             html.Li(f"S0: {S0:.2f}", style={"marginBottom": "10px"}),
             html.Li(f"Price: {price:.2f}", style={"marginBottom": "10px"}),
@@ -494,6 +494,115 @@ def compute_iv(r, option_type, K, T):
             html.Li(f"Theta: {greeks['theta']:.2f}", style={"marginBottom": "10px"})
         ]), width=6)
     ],)
+    return greeks_child, False
+
+
+
+@app.callback(
+    [Output("modal-xl-interpol", "is_open"), Output("interpol-graph", "figure")],
+    State("risk-free", "value"),
+    State("standalone-switch", "value"),
+    State("input-K", "value"),
+    State("input-T", "value"),
+    State("modal-xl-interpol", "is_open"),
+    Input("open-interpol", "n_clicks"),
+    prevent_initial_call=True
+)
+def interpole_show(r, option_type, K, T, is_open, n_clicks):
+    if n_clicks > 0:
+        if K is None or T is None:
+            return dbc.Alert("Please provide valid inputs for K and T.", color="danger")
+        if "IV" not in pricing.data.columns:
+                if r == None:
+                    r = 0.03
+                pricing.compute_iv(r)
+        
+        S0 = pricing.price
+        _, volatility= pricing.price_option_by_interpolation(K, T, S0, r=r, option_type=options_dict_value[option_type])
+        
+        points = np.round(pricing.data[['K', 'T']].values, 2)
+        volatilities = np.round(pricing.data['IV'].values, 2)
+
+        # Trouver les points qui encadrent la cible
+        K_values = np.unique(points[:, 0])
+        T_values = np.unique(points[:, 1])
+
+        # Trouver les plus proches valeurs de K et T qui encadrent K_target et T_target
+        K_left = K_values[K_values <= K].max()
+        K_right = K_values[K_values >= K].min()
+        T_bottom = T_values[T_values <= T].max()
+        T_top = T_values[T_values >= T].min()
+
+        # Points qui encadrent
+        encasing_points = np.array([
+            [K_left, T_bottom],
+            [K_left, T_top],
+            [K_right, T_bottom],
+            [K_right, T_top],
+        ])
+        #encasing_vols = [volatilities[np.where((points == p).all(axis=1))[0][0]] for p in encasing_points]
+
+        limited_points = None
+        limited_volatilities = None
+        max_points = 20
+        if len(points) > max_points:
+            random_indices = np.random.choice(len(points), size=max_points, replace=False)
+            limited_points = points[random_indices]
+            limited_volatilities = volatilities[random_indices]
+        else:
+            limited_points = points
+            limited_volatilities = volatilities
+            
+        fig = go.Figure()
+
+        # Existing points
+        fig.add_trace(go.Scatter(
+            x=limited_points[:, 0],
+            y=limited_points[:, 1],
+            mode='markers+text',
+            marker=dict(size=10, color=limited_volatilities, colorscale='Viridis', showscale=True),
+            text=[f'({x}, {y})' for x, y in points],
+            textposition="top center",
+            name="Existing Points"
+        ))
+
+        # Target point
+        fig.add_trace(go.Scatter(
+            x=[K],
+            y=[T],
+            mode='markers+text',
+            marker=dict(size=15, color='red', line=dict(width=2, color='black')),
+            text=[f'Target (vol={volatility:.3f})'],
+            textposition="top center",
+            name="Target Point"
+        ))
+
+        # Encasing points
+        fig.add_trace(go.Scatter(
+            x=encasing_points[:, 0],
+            y=encasing_points[:, 1],
+            mode='markers+text',
+            marker=dict(size=12, color='orange', line=dict(width=2, color='black')),
+            text=[f'({x}, {y})' for x, y in encasing_points],
+            textposition="top center",
+            name="Encasing Points"
+        ))
+
+        # Layout adjustments
+        fig.update_layout(
+            title="Volatility Interpolation and Encasing Points",
+            xaxis_title="K (Strike)",
+            yaxis_title="T (Time to Maturity)",
+            legend=dict(yanchor="top", y=0.99, xanchor="left", x=0.01),
+            coloraxis_colorbar=dict(title="Volatility"),
+            width=800,
+            height=600,
+            template="plotly_white"
+        )
+
+        return True, fig
+
+    return is_open, dash.no_update
 
 
 
@@ -573,7 +682,6 @@ def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, o
             mu_targets.append(mu_target)
 
     # Identifier le portefeuille tangent (maximisation du ratio de Sharpe)
-    print(np.array(mu_targets).shape, np.array(sml_volatilities).shape)
     sharpe_ratios = (np.array(mu_targets) - rf) / np.array(sml_volatilities)
     market_index = np.argmax(sharpe_ratios)
     market_volatility = sml_volatilities[market_index]

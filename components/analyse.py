@@ -53,13 +53,29 @@ class Analyse:
                                               valid=True, className="mb-3"),
                                     dbc.Input(id="risk-free",debounce=True, type='number', placeholder="Valid input...", 
                                               valid=True, className="mb-3"),
-                                    dbc.Button("Compute IV", id="open-volatility", n_clicks=0, className="w-100"),
+                                    dbc.Row([
+                                            dbc.Col([
+                                                dbc.Button("Compute IV", id="open-volatility", n_clicks=0, className="w-100"),
+                                                ], width=6),
+                                            dbc.Col([
+                                                dbc.Button("Show Interpolation", id="open-interpol", disabled=True , color="secondary", n_clicks=0, className="w-100"),
+                                                ], width=6)
+                                        ]),
                                     dbc.Modal(
                                             [
                                                 dbc.ModalHeader(dbc.ModalTitle("Implied Volatility")),
                                                 dbc.ModalBody(dcc.Graph(id="volatility-graph")),
                                             ],
                                             id="modal-xl",
+                                            size="xl",
+                                            is_open=False,
+                                        ),
+                                    dbc.Modal(
+                                            [
+                                                dbc.ModalHeader(dbc.ModalTitle("Implied Volatility")),
+                                                dbc.ModalBody(dcc.Graph(id="interpol-graph")),
+                                            ],
+                                            id="modal-xl-interpol",
                                             size="xl",
                                             is_open=False,
                                         ),
