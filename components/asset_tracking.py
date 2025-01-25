@@ -55,12 +55,13 @@ class IndexReplication:
         """
         Calculate tracking error between portfolio and benchmark.
         """
-        covariance_matrix = portfolio_returns.cov().to_numpy() * np.sqrt(period)
-        sigma_portfolio = weights.T @ covariance_matrix @ weights
-        sigma_benchmark = benchmark_returns.var() * np.sqrt(period)
+        covariance_matrix = np.cov(portfolio_returns, rowvar=False) * np.sqrt(period)
+        var_portfolio = weights.T @ covariance_matrix @ weights
+        var_benchmark = np.var(benchmark_returns) * np.sqrt(period)
 
         # Minimize tracking error formula is like minimizing the following function
-        return (sigma_portfolio + sigma_benchmark - 2 * rho_b_p * np.sqrt(sigma_portfolio) * np.sqrt(sigma_benchmark))
+        return np.sqrt(var_portfolio + var_benchmark - 2 * rho_b_p * np.sqrt(var_portfolio) * np.sqrt(var_benchmark))
+
 
     def optimize_tracking_error(self, train_benchmark, train_portfolio, tol=1e-6):
         """
@@ -77,7 +78,9 @@ class IndexReplication:
         n_assets = portfolio_returns.shape[1]
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
         bounds = [(0.0, 1.0) for _ in range(n_assets)]
-        initial_weights = np.zeros(n_assets) 
+        initial_weights = np.ones(n_assets) / n_assets
+        # index = np.random.choice(n_assets)
+        # initial_weights[index] = 1.0  # Initial weight for the first asset
 
         result = minimize(
             fun=lambda w: self.calculate_tracking_error(w, benchmark_returns, portfolio_returns, period=self.period),
