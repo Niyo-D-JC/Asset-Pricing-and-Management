@@ -79,8 +79,6 @@ class IndexReplication:
         constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
         bounds = [(0.0, 1.0) for _ in range(n_assets)]
         initial_weights = np.ones(n_assets) / n_assets
-        # index = np.random.choice(n_assets)
-        # initial_weights[index] = 1.0  # Initial weight for the first asset
 
         result = minimize(
             fun=lambda w: self.calculate_tracking_error(w, benchmark_returns, portfolio_returns, period=self.period),
