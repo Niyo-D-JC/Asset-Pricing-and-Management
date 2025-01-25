@@ -224,20 +224,32 @@ class Analyse:
                                         ],
                                         justify="between"  # Place les colonnes aux extrémités
                                     ),
-                                            html.Label("Data Frequency", style={"fontWeight": "normal"}),
+                                            html.Label("Data Rebalancing", style={"fontWeight": "normal"}),
                                             dcc.Dropdown(
-                                                id="data-frequency",
+                                                id="data-rebalancing",
                                                 options=[
-                                                    {"label": "Weekly", "value": "W"},
+                                                    {"label": "Yearly", "value": "Y"},
                                                     {"label": "Monthly", "value": "M"},
                                                 ],
-                                                value="W",
+                                                value="Y",
                                                 placeholder="Select frequency",
                                                 style={"fontWeight": "normal"}
                                             ),
                                             html.Br(),
+                                            dbc.Row([
+                                                    dbc.Col([
+                                                        html.H6("Show sector weights:", style={"color": "#2c3e50", "fontWeight": "normal"})
+                                                    ], width=6),
+                                                    dbc.Col([
+                                                        dbc.Switch(
+                                                            id="sector-standalone-switch",
+                                                            value=False,
+                                                        )
+                                                    ], width="auto", className="d-flex justify-content-end")
+                                                ], className="justify-content-between"),
+                                            html.Br(),
                                             dbc.Button(
-                                                "Run Backtest",
+                                                "Update",
                                                 id="run-backtest",
                                                 color="primary",
                                                 className="w-100",
@@ -247,11 +259,13 @@ class Analyse:
                                     ),
                                     className="mb-3",
                                 ),
+                                
                                 html.H5("Optimized Portfolio Weights", style={"textAlign": "center"}),
                                     dash_table.DataTable(
                                         id="optimized-weights-table",
                                         columns=[
                                             {"name": "Ticker", "id": "Ticker"},
+                                            {"name": "Sector", "id": "Sector"},
                                             {"name": "Symbol", "id": "Symbol"},
                                             {"name": "Weight (%)", "id": "Weight"},
                                         ],

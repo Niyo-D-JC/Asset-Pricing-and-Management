@@ -127,6 +127,49 @@ stocks_dict = {
     "DG.PA": "Vinci",
 }
 
+sector_mapping = {
+        "AC.PA": "Hôtellerie et Loisirs",
+        "ACA.PA": "Banques",
+        "AI.PA": "Industrie",
+        "AIR.PA": "Aéronautique",
+        "BN.PA": "Consommation de base",
+        "BNP.PA": "Banques",
+        "BVI.PA": "Médias",
+        "CA.PA": "Distribution",
+        "CAP.PA": "Technologie",
+        "CS.PA": "Assurance",
+        "DG.PA": "Industrie et Construction",
+        "DSY.PA": "Technologie",
+        "EDEN.PA": "Technologie",
+        "EL.PA": "Santé",
+        "EN.PA": "Services publics",
+        "ENGI.PA": "Énergie",
+        "ERF.PA": "Santé",
+        "GLE.PA": "Banques",
+        "HO.PA": "Aéronautique",
+        "KER.PA": "Luxe",
+        "LR.PA": "Énergie",
+        "MC.PA": "Luxe",
+        "ML.PA": "Transport et Logistique",
+        "MT.AS": "Métaux et Mines",
+        "OR.PA": "Produits de beauté",
+        "ORA.PA": "Télécommunications",
+        "PUB.PA": "Médias et Publicité",
+        "RI.PA": "Consommation discrétionnaire",
+        "RMS.PA": "Luxe",
+        "RNO.PA": "Automobile", 
+        "SAF.PA": "Aéronautique",
+        "SAN.PA": "Santé",
+        "SGO.PA": "Matériaux de Construction",
+        "STLA": "Automobile",
+        "STMPA.PA": "Technologie",
+        "SU.PA": "Services publics",
+        "TEP.PA": "Énergie",
+        "TTE.PA": "Énergie",
+        "UNBLF": "Immobilier",
+        "VIE.PA": "Services publics"
+    }
+
 
 symbole_list = list(set(symbole_list))
 
@@ -787,12 +830,13 @@ def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, o
     [Output("tracking-error-graph", "figure"),
      Output("annualized-returns-graph", "figure"),
      Output("optimized-weights-table", "data")],
-    [Input("run-backtest", "n_clicks")],
+    [Input("run-backtest", "n_clicks")],  
     [State("start-date-picker", "date"),
      State("end-date-picker", "date"),
-     State("data-frequency", "value")]
+     State("data-rebalancing", "value"),
+     State("sector-standalone-switch", "value")] 
 )
-def update_tracking_error(n_clicks, start_date, end_date, frequency):
+def update_tracking_error(n_clicks, start_date, end_date, frequency,sector):
     if not n_clicks or n_clicks <= 0:
         return dash.no_update, dash.no_update, []
 
@@ -812,18 +856,14 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency):
         # Create Tracking Error Graph
         fig_te = go.Figure()
         fig_te.add_trace(go.Scatter(
-            x=tracking_df["Year"], y=tracking_df["Tracking Error"],
+            x=tracking_df["Period"], y=tracking_df["Tracking Error"],
             mode="lines+markers", name="Tracking Error"
         ))
         fig_te.update_layout(
             title="CAC 40 tracking error by year",
             xaxis_title="Year",
             yaxis_title="Tracking Error",
-            template="plotly_white",
-            xaxis=dict(
-                tickmode='linear',  # Assure un espacement constant des ticks
-                dtick=1  # Progression d'une unité
-            )
+            template="plotly_white"
         )
 
         # Create Annualized Returns Graph
@@ -845,8 +885,19 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency):
         )
 
         # Optimized Weights Data
-        weights_data = [{"Ticker": stocks_dict[ticker],"Symbol": ticker, "Weight": round(weight * 100, 2)}
-                        for ticker, weight in replication.weights_history[-1].items()]
+        if sector :
+            sector_weights = {}
+            for ticker, weight in replication.weights_history[-1].items():
+                sector = sector_mapping.get(ticker, "Non attribué")
+                sector_weights[sector] = sector_weights.get(sector, 0) + weight
+
+            # Conversion des poids par secteur en liste de dictionnaires
+            weights_data = [{"Sector": sector, "Weight": round(weight * 100, 2)}
+                                    for sector, weight in sector_weights.items()]
+        else:
+            weights_data = [{"Ticker": stocks_dict[ticker], "Sector" : sector_mapping[ticker] ,"Symbol": ticker, "Weight": round(weight * 100, 2)}
+                for ticker, weight in replication.weights_history[-1].items()]
+
 
         return fig_te, fig_ar, weights_data
     except Exception as e:
