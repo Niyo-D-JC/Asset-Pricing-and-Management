@@ -859,8 +859,11 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency,sector):
             x=tracking_df["Period"], y=tracking_df["Tracking Error"],
             mode="lines+markers", name="Tracking Error"
         ))
+        per = 'month'
+        if frequency!='M':
+            per = 'year'
         fig_te.update_layout(
-            title="CAC 40 tracking error by year",
+            title=f"CAC 40 tracking error by {per}",
             xaxis_title="Year",
             yaxis_title="Tracking Error",
             template="plotly_white"

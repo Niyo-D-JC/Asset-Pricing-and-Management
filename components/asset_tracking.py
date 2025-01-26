@@ -10,7 +10,7 @@ class IndexReplication:
         self.start_date = start_date
         self.end_date = end_date
         self.monthly = monthly
-        self.period = 52
+        self.period = 252
         self.weights_history = []
         self.data = None
         self.portfolio_data = None
@@ -51,18 +51,23 @@ class IndexReplication:
         self.benchmark_data = index
 
     @staticmethod
-    def calculate_tracking_error(weights, benchmark_returns, portfolio_returns, rho_b_p=1, period=52):
+    def calculate_tracking_error(weights, benchmark_returns, portfolio_returns, rho_b_p=1, period=252):
         """
         Calculate tracking error between portfolio and benchmark.
         """
+        portfolio_returns__ = np.dot(portfolio_returns, weights.reshape(-1, 1))
+        diff = portfolio_returns__ - benchmark_returns
+        
+        
         covariance_matrix = np.cov(portfolio_returns, rowvar=False) * np.sqrt(period)
         var_portfolio = weights.T @ covariance_matrix @ weights
-        var_benchmark = np.var(benchmark_returns) * np.sqrt(period)
+        var_benchmark = (np.var(benchmark_returns, axis=0) * np.sqrt(period)).iloc[0]
 
         # Minimize tracking error formula is like minimizing the following function
-        return np.sqrt(var_portfolio + var_benchmark - 2 * rho_b_p * np.sqrt(var_portfolio) * np.sqrt(var_benchmark))
-
-
+        return np.sqrt(float(var_portfolio + var_benchmark - 2 * rho_b_p * np.sqrt(var_portfolio) * np.sqrt(var_benchmark)))
+        
+        #return np.sqrt(np.mean(diff ** 2))
+    
     def optimize_tracking_error(self, train_benchmark, train_portfolio, tol=1e-6):
         """
         Optimize portfolio weights to minimize tracking error.
@@ -76,7 +81,12 @@ class IndexReplication:
         portfolio_returns = np.log(train_portfolio / train_portfolio.shift(1)).dropna()
 
         n_assets = portfolio_returns.shape[1]
-        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
+        max_assets = 38
+        
+        constraints = [#{'type': 'eq', 'fun': lambda w: max_assets - np.sum(w > 0)},
+                       {"type": "eq", "fun": lambda w: np.sum(w) - 1},
+                       ]
+        
         bounds = [(0.0, 1.0) for _ in range(n_assets)]
         initial_weights = np.ones(n_assets) / n_assets
 
@@ -88,7 +98,7 @@ class IndexReplication:
             method='SLSQP',
             tol=tol
         )
-
+        
         if result.success:
             return {ticker: weight for ticker, weight in zip(portfolio_returns.columns, result.x)}
         else:
