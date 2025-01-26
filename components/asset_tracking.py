@@ -10,7 +10,7 @@ class IndexReplication:
         self.start_date = start_date
         self.end_date = end_date
         self.monthly = monthly
-        self.period = 252
+        self.period = 52
         self.weights_history = []
         self.data = None
         self.portfolio_data = None
@@ -51,7 +51,7 @@ class IndexReplication:
         self.benchmark_data = index
 
     @staticmethod
-    def calculate_tracking_error(weights, benchmark_returns, portfolio_returns, rho_b_p=1, period=252):
+    def calculate_tracking_error(weights, benchmark_returns, portfolio_returns, rho_b_p=1, period=52):
         """
         Calculate tracking error between portfolio and benchmark.
         """
@@ -62,50 +62,67 @@ class IndexReplication:
         covariance_matrix = np.cov(portfolio_returns, rowvar=False) * np.sqrt(period)
         var_portfolio = weights.T @ covariance_matrix @ weights
         var_benchmark = (np.var(benchmark_returns, axis=0) * np.sqrt(period)).iloc[0]
-
+        
         # Minimize tracking error formula is like minimizing the following function
         return np.sqrt(float(var_portfolio + var_benchmark - 2 * rho_b_p * np.sqrt(var_portfolio) * np.sqrt(var_benchmark)))
         
         #return np.sqrt(np.mean(diff ** 2))
     
-    def optimize_tracking_error(self, train_benchmark, train_portfolio, tol=1e-6):
+    def optimize_tracking_error(self, train_benchmark, train_portfolio, tol=1e-6, max_assets = 40):
         """
         Optimize portfolio weights to minimize tracking error.
 
         Returns:
         - tracking_df: Calculated tracking error for the optimized weights.
-        - annualized_portfolio_return: Annualized cumulative returns of the optimized portfolio.
-        - annualized_benchmark_return: Annualized cumulative returns of the benchmark.
         """
         benchmark_returns = np.log(train_benchmark / train_benchmark.shift(1)).dropna()
         portfolio_returns = np.log(train_portfolio / train_portfolio.shift(1)).dropna()
 
         n_assets = portfolio_returns.shape[1]
-        max_assets = 38
         
-        constraints = [#{'type': 'eq', 'fun': lambda w: max_assets - np.sum(w > 0)},
-                       {"type": "eq", "fun": lambda w: np.sum(w) - 1},
-                       ]
-        
-        bounds = [(0.0, 1.0) for _ in range(n_assets)]
+        # Initial weights (equal weighting)
         initial_weights = np.ones(n_assets) / n_assets
 
+        # Bounds for weights (between 0 and 1)
+        bounds = [(0.0, 1.0) for _ in range(n_assets)]
+
+        # Objective function with penalty for exceeding max_assets
+        def objective_with_penalty(weights):
+            binary_selection = (weights > 0.001).astype(int)  # Consider weights > 0 as selected
+            num_selected_assets = np.sum(binary_selection)
+
+            # Penalty for selecting more than max_assets
+            penalty = max(0, np.abs(num_selected_assets - max_assets))/n_assets
+
+            #bool_pen = 1-(num_selected_assets == max_assets).astype(int) 
+
+            # Calculate the tracking error
+            tracking_error = self.calculate_tracking_error(weights, benchmark_returns, portfolio_returns, period=self.period)
+
+            return tracking_error + penalty #+ bool_pen
+
+        # Constraint: weights must sum to 1
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1},]
+
+        # Minimize the objective
         result = minimize(
-            fun=lambda w: self.calculate_tracking_error(w, benchmark_returns, portfolio_returns, period=self.period),
+            fun=objective_with_penalty,
             x0=initial_weights,
             bounds=bounds,
             constraints=constraints,
-            method='SLSQP',
+            method="SLSQP",
             tol=tol
         )
-        
+
         if result.success:
+            w_opt = result.x
+            w_opt[w_opt<= 0.001] = 0
+            w_opt = w_opt/w_opt.sum()
             return {ticker: weight for ticker, weight in zip(portfolio_returns.columns, result.x)}
         else:
-            print("Message:", result.message)
-            raise ValueError("L'optimisation du Tracking Error a échoué.")
+            return {ticker: weight for ticker, weight in zip(portfolio_returns.columns, initial_weights)}
             
-    def run_backtest(self):
+    def run_backtest(self, max_assets = 40):
         """
         Perform backtesting with sliding 1-year training periods and flexible test periods.
         """
@@ -152,10 +169,11 @@ class IndexReplication:
                 break
             
             # Optimize weights using the training data
-            optimized_weights = self.optimize_tracking_error(train_benchmark, train_portfolio)
-    
+            optimized_weights = self.optimize_tracking_error(train_benchmark, train_portfolio, max_assets = max_assets)
+            
             # Convert weights to array and store them
             weights = np.array(list(optimized_weights.values()))
+
             self.weights_history.append(optimized_weights)
     
             # Compute test period returns

@@ -224,18 +224,36 @@ class Analyse:
                                         ],
                                         justify="between"  # Place les colonnes aux extrémités
                                     ),
-                                            html.Label("Data Rebalancing", style={"fontWeight": "normal"}),
-                                            dcc.Dropdown(
-                                                id="data-rebalancing",
-                                                options=[
-                                                    {"label": "Yearly", "value": "Y"},
-                                                    {"label": "Monthly", "value": "M"},
+                                    dbc.Row(
+                                        [
+                                            dbc.Col(
+                                                [
+                                                html.Label("Data Rebalancing", style={"fontWeight": "normal"}),
+                                                dcc.Dropdown(
+                                                    id="data-rebalancing",
+                                                    options=[
+                                                        {"label": "Yearly", "value": "Y"},
+                                                        {"label": "Monthly", "value": "M"},
+                                                    ],
+                                                    value="Y",
+                                                    placeholder="Select frequency",
+                                                    style={"fontWeight": "normal"}
+                                                ),
                                                 ],
-                                                value="Y",
-                                                placeholder="Select frequency",
-                                                style={"fontWeight": "normal"}
+                                                width=6  # Ajuste la largeur au contenu
                                             ),
-                                            html.Br(),
+                                            dbc.Col(
+                                                [
+                                                    html.Br(),
+                                                    dbc.Input(id="max-assets", min = 20, max=40, debounce=True, type='number', placeholder="Max Assets : 20-40", 
+                                              valid=True, className="mb-3"),
+                                                ],
+                                                width=6,  # Ajuste la largeur au contenu
+                                            ),
+                                        ],
+                                        justify="between"  # Place les colonnes aux extrémités
+                                    ),
+        
                                             dbc.Row([
                                                     dbc.Col([
                                                         html.H6("Show sector weights:", style={"color": "#2c3e50", "fontWeight": "normal"})

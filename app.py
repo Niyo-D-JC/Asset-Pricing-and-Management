@@ -834,9 +834,10 @@ def update_graph_portfolio(n_click, cor_n, type_freq, inf_w, sup_w, date_, r_, o
     [State("start-date-picker", "date"),
      State("end-date-picker", "date"),
      State("data-rebalancing", "value"),
-     State("sector-standalone-switch", "value")] 
+     State("sector-standalone-switch", "value"),
+     State("max-assets", "value")] 
 )
-def update_tracking_error(n_clicks, start_date, end_date, frequency,sector):
+def update_tracking_error(n_clicks, start_date, end_date, frequency,sector, max_assets):
     if not n_clicks or n_clicks <= 0:
         return dash.no_update, dash.no_update, []
 
@@ -845,8 +846,10 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency,sector):
         replication.monthly = (frequency == "M")
         replication.get_sub_data(start_date, end_date)
 
+        if max_assets == None:
+            max_assets = 40
         # Run backtest
-        tracking_df, annualized_portfolio_return, annualized_benchmark_return = replication.run_backtest()
+        tracking_df, annualized_portfolio_return, annualized_benchmark_return = replication.run_backtest(max_assets)
         # Convert `Tracking Error` to a DataFrame with clean floats
         tracking_df["Tracking Error"] = tracking_df["Tracking Error"].apply(
             lambda x: float(x.iloc[0]) if isinstance(x, pd.Series) else x
@@ -901,7 +904,7 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency,sector):
             weights_data = [{"Ticker": stocks_dict[ticker], "Sector" : sector_mapping[ticker] ,"Symbol": ticker, "Weight": round(weight * 100, 2)}
                 for ticker, weight in replication.weights_history[-1].items()]
 
-
+        
         return fig_te, fig_ar, weights_data
     except Exception as e:
         print(f"Error during callback execution: {e}")
