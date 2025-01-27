@@ -55,16 +55,13 @@ class IndexReplication:
         """
         Calculate tracking error between portfolio and benchmark.
         """
-        portfolio_returns__ = np.dot(portfolio_returns, weights.reshape(-1, 1))
-        diff = portfolio_returns__ - benchmark_returns
-        
-        
-        covariance_matrix = np.cov(portfolio_returns, rowvar=False) * np.sqrt(period)
+        covariance_matrix = np.cov(portfolio_returns, rowvar=False) * period
         var_portfolio = weights.T @ covariance_matrix @ weights
-        var_benchmark = (np.var(benchmark_returns, axis=0) * np.sqrt(period)).iloc[0]
+        var_benchmark = (np.var(benchmark_returns, axis=0) * period).iloc[0]
         
         # Minimize tracking error formula is like minimizing the following function
-        return np.sqrt(float(var_portfolio + var_benchmark - 2 * rho_b_p * np.sqrt(var_portfolio) * np.sqrt(var_benchmark)))
+        
+        return np.sqrt(np.abs(float(var_portfolio + var_benchmark - 2 * rho_b_p * np.sqrt(var_portfolio) * np.sqrt(var_benchmark))))
         
         #return np.sqrt(np.mean(diff ** 2))
     
@@ -92,7 +89,7 @@ class IndexReplication:
             num_selected_assets = np.sum(binary_selection)
 
             # Penalty for selecting more than max_assets
-            penalty = max(0, np.abs(num_selected_assets - max_assets))/n_assets
+            penalty = max(0, num_selected_assets - max_assets)/n_assets
 
             #bool_pen = 1-(num_selected_assets == max_assets).astype(int) 
 
@@ -102,7 +99,7 @@ class IndexReplication:
             return tracking_error + penalty #+ bool_pen
 
         # Constraint: weights must sum to 1
-        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1},]
+        constraints = [{"type": "eq", "fun": lambda w: np.sum(w) - 1}]
 
         # Minimize the objective
         result = minimize(
