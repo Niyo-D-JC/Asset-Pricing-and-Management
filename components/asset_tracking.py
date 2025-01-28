@@ -60,8 +60,11 @@ class IndexReplication:
         var_benchmark = (np.var(benchmark_returns, axis=0) * period).iloc[0]
         
         # Minimize tracking error formula is like minimizing the following function
+        term = float(var_portfolio + var_benchmark - 2 * rho_b_p * np.sqrt(var_portfolio) * np.sqrt(var_benchmark))
+        if term<0:
+            term = 1
         
-        return np.sqrt(np.abs(float(var_portfolio + var_benchmark - 2 * rho_b_p * np.sqrt(var_portfolio) * np.sqrt(var_benchmark))))
+        return np.sqrt(term)
         
         #return np.sqrt(np.mean(diff ** 2))
     
@@ -85,7 +88,7 @@ class IndexReplication:
 
         # Objective function with penalty for exceeding max_assets
         def objective_with_penalty(weights):
-            binary_selection = (weights > 0.001).astype(int)  # Consider weights > 0 as selected
+            binary_selection = (weights > 0).astype(int)  # Consider weights > 0 as selected
             num_selected_assets = np.sum(binary_selection)
 
             # Penalty for selecting more than max_assets
@@ -113,7 +116,7 @@ class IndexReplication:
 
         if result.success:
             w_opt = result.x
-            w_opt[w_opt<= 0.001] = 0
+            w_opt[w_opt<= 0] = 0
             w_opt = w_opt/w_opt.sum()
             return {ticker: weight for ticker, weight in zip(portfolio_returns.columns, result.x)}
         else:
