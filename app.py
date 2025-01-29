@@ -12,9 +12,9 @@ import numpy as np
 
 from components.menu import *
 from components.analyse import Analyse
-from components.asset_pricing import Pricing
-from components.asset_management import Management
-from components.asset_tracking import IndexReplication
+from tools_class.asset_pricing import Pricing
+from tools_class.asset_management import Management
+from tools_class.asset_tracking import IndexReplication
 
 import plotly.express as px
 import pandas as pd
@@ -69,7 +69,9 @@ options_dict_value = {
     False: "put"   # Quand le switch est désactivé, "Put"
 }
 
-# 
+file_path_zc = "Courbe-zero-coupon-31-decembre-2024.xlsx"
+taux_zero_coupons = pd.read_excel(file_path_zc, sheet_name="Données",header = 1)
+
 symbole_list = [
     "AAPL",  # Apple (Technologie)
     "EEM",   # iShares MSCI Emerging Markets ETF (Pays émergents)
