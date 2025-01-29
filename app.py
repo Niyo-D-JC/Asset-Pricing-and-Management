@@ -15,6 +15,8 @@ from components.analyse import Analyse
 from tools_class.asset_pricing import Pricing
 from tools_class.asset_management import Management
 from tools_class.asset_tracking import IndexReplication
+from tools_class.zero_coupons import Zero_Coupons
+from tools_class.optional_exotic import Optional_Excotic
 
 import plotly.express as px
 import pandas as pd
@@ -69,8 +71,8 @@ options_dict_value = {
     False: "put"   # Quand le switch est désactivé, "Put"
 }
 
-file_path_zc = "Courbe-zero-coupon-31-decembre-2024.xlsx"
-taux_zero_coupons = pd.read_excel(file_path_zc, sheet_name="Données",header = 1)
+taux_zero_coupons = pd.read_excel("data\\Courbe-zero-coupon-31-decembre-2024.xlsx", sheet_name="Données",header = 1)
+taux_zero_coupons.columns = ["Maturity", "Rate", "Actual Coef"]
 
 symbole_list = [
     "AAPL",  # Apple (Technologie)
@@ -176,6 +178,9 @@ sector_mapping = {
 symbole_list = list(set(symbole_list))
 
 management = Management(symbole_list)
+
+zero_coupons = Zero_Coupons()
+optionel_exotic = Optional_Excotic()
 
 replication = IndexReplication(
             index_ticker="^FCHI",
@@ -912,6 +917,270 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency,sector, max_
         print(f"Error during callback execution: {e}")
         return dash.no_update, dash.no_update, [{"Ticker": "Error", "Weight": str(e)}]
 
+
+################### OTHER RATE/PRICING ####################
+
+def generate_interpolation_graph(method, maturities, zero_coupon_rates):
+    if method == "log":
+        maturites_cibles, taux_interpoles = zero_coupons.interpoler_taux_by_loglin(maturities, zero_coupon_rates)
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=maturities, y=zero_coupon_rates, mode='markers+lines', 
+                                 name="Observed Zero Coupon Rates", marker=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=maturites_cibles, y=np.array(taux_interpoles) * 100, mode='lines',
+                                 name="Interpolated Zero Coupon Rates (Log-Linear)", line=dict(color='orange', dash='dash')))
+        fig.update_layout(title="Comparison of Zero Coupon Rate Curves",
+                          xaxis_title="Maturity (Years)",
+                          yaxis_title="Zero Coupon Rate (%)",
+                          legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5))
+    else:
+        tau_fine, fitted_rates = zero_coupons.interpoler_taux_by_nelson_siegel(maturities, zero_coupon_rates)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=maturities, y=zero_coupon_rates, mode='markers+lines', 
+                                 name="Observed Zero Coupon Rates", marker=dict(color='blue')))
+        fig.add_trace(go.Scatter(x=tau_fine, y=fitted_rates, mode='lines',
+                                 name="Fitted Curve (Nelson-Siegel)", line=dict(color='orange',  dash='dash')))
+        fig.update_layout(title="Zero Coupon Rate Curve Fitting (Nelson-Siegel)",
+                          xaxis_title="Maturity (Years)",
+                          yaxis_title="Zero Coupon Rate (%)",
+                          legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5))
+    return fig
+
+
+@app.callback(
+    [Output("zero-coupons-table", "data"),
+     Output("zero-coupons-table", "columns"),
+     Output("interpolate-graph", "figure")],
+    Input("run-interoplate", "n_clicks"),
+    State("interpolate-method", "value")
+)
+def update_interpolation(n_clicks, method):
+    # Load data
+    maturities = taux_zero_coupons["Maturity"]
+    zero_coupon_rates = taux_zero_coupons["Rate"]
+    
+    # Generate table
+
+    table_data = taux_zero_coupons.copy()
+    table_data[["Rate", "Actual Coef"]] = table_data[["Rate", "Actual Coef"]].round(3)
+    table_data = table_data.to_dict("records")
+    table_columns = [{"name": col, "id": col} for col in ["Maturity", "Rate", "Actual Coef"]]
+    
+    # Generate graph
+    figure = generate_interpolation_graph(method, maturities, zero_coupon_rates)
+    
+    return table_data, table_columns, figure
+
+
+@app.callback(
+    Output("input-princing-div", "children"),
+    Input("princing-method", "value")
+)
+def update_input_princing(method):
+    hide = {"display": "none"}
+    show = {}
+    coupon = show
+    principal = show
+    delta = show
+    amplitude_echeances = show
+    maturity = show
+    time = show
+    bloc_1 = show
+    bloc_2 = show
+    bloc_3 = show
+    if method == "flex-bond":
+        delta = hide
+        time = hide
+        bloc_3 = hide
+        
+    elif method == "swap-rate":
+        coupon = hide
+        principal = hide
+        amplitude_echeances = hide
+        time = hide
+        bloc_1 = hide
+        bloc_3 = hide
+        
+    elif method == "fra":
+        coupon = hide
+        principal = hide
+        amplitude_echeances = hide
+        bloc_1 = hide
+        bloc_3 = hide
+    
+    child = [dbc.Row([
+                    dbc.Col([
+                        dbc.Input(id="coupon", type="number", placeholder="Coupon", className="mb-3")
+                    ], width=6, style=coupon),
+                    dbc.Col([
+                        dbc.Input(id="principal", debounce=True, type="number", placeholder="Main", className="mb-3")
+                    ], width=6, style=principal)
+                ], style=bloc_1),
+                
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Input(id="delta", type="number", placeholder="Delta", className="mb-3")
+                    ], width=6, style=delta),
+                    dbc.Col([
+                        dbc.Input(id="amplitude_echeances", type="number", placeholder="Amplitude Deadlines", className="mb-3")
+                    ], width=6, style=amplitude_echeances),
+                    dbc.Col([
+                        dbc.Input(id="maturity", debounce=True, type="number", placeholder="Maturity", className="mb-3")
+                    ], width=6, style=maturity),
+                ], style=bloc_2),
+                
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Input(id="time", type="number", placeholder="Time", className="mb-3")
+                    ], width=12, style=time)
+                ], style=bloc_3),
+                ]
+    return child
+
+
+@app.callback(
+    Output("output-princing-div", "children"),
+    [State("princing-method", "value"), State("coupon", "value"),State("principal", "value"),
+     State("amplitude_echeances", "value"), State("maturity", "value"), State("delta", "value"),
+     ],
+     Input("run-pricing", "n_clicks"),
+    prevent_initial_call=True,
+)
+def update_output_princing(method, coupon, principal, amplitude_echeances, maturity, delta, n_clicks):
+    
+    taux_zero_coupons_value = taux_zero_coupons["Rate"]
+    discount_factors = taux_zero_coupons["Actual Coef"]
+    val = None
+    if method == "flex-bond":
+        if (coupon != None and principal != None and amplitude_echeances != None and maturity != None):
+            val = zero_coupons.pricer_obligation_flexible(coupon, principal, amplitude_echeances ,maturity, taux_zero_coupons_value)
+    elif method == "swap-rate":
+        if (delta != None and maturity != None):
+            val = zero_coupons.swap_rate_flexible(taux_zero_coupons_value, discount_factors, delta, maturity)
+    elif method == "fra":
+        if (delta != None and maturity != None):
+            val = zero_coupons.calculate_FRA(taux_zero_coupons_value ,discount_factors, maturity, delta, t=0)
+    else:
+        return ""
+    
+    return html.H5(f"Result : {val:.2f}")
+
+def barrier_option_wrapper(S0, K, T, r, sigma, barrier, option_type, barrier_type, n_paths, n_steps, seed=102):
+    return optionel_exotic.barrier_option(S0, K, T, r, sigma, n_paths, n_steps, barrier, option_type, barrier_type, seed=seed)
+    
+
+@app.callback(
+    [Output("simulate-barrier-graph", "figure"),
+     Output("output-barrier-div", "children")],
+    [State("price_s0-bar", "value"),
+     State("maturity-bar", "value"),
+     State("risk-free-bar", "value"),
+     State("volatility-bar", "value"),
+     State("strike-bar", "value"),
+     State("barrier-bar", "value"),
+     State("barrier-type", "value"),
+     State("option-type", "value")],
+     Input("run-barrier", "n_clicks"),
+)
+def simulate_option_barrier(price_s0, maturity, risk_free, volatility, strike, barrier, barrier_type, option_type, n_clicks):
+    if (price_s0 != None and maturity != None and risk_free != None and volatility != None and strike != None and barrier != None):
+        barrier_price = optionel_exotic.barrier_option(price_s0, strike, maturity, risk_free, volatility, 50, 1000, barrier, option_type, barrier_type, seed=102)
+
+        
+        paths = optionel_exotic.simulate_black_scholes(price_s0, maturity, risk_free, volatility, n_paths=1000, n_steps=50, seed=102)
+        
+        delta_barrier = optionel_exotic.calculate_greeks_barrier(barrier_option_wrapper, price_s0, strike, maturity, risk_free, volatility, barrier, option_type, barrier_type, n_paths=1000, n_steps=50, greek="delta", seed=102)
+        gamma_barrier = optionel_exotic.calculate_greeks_barrier(barrier_option_wrapper, price_s0, strike, maturity, risk_free, volatility, barrier, option_type, barrier_type, n_paths=1000, n_steps=50, greek="gamma", seed=102)
+        vega_barrier = optionel_exotic.calculate_greeks_barrier(barrier_option_wrapper, price_s0, strike, maturity, risk_free, volatility, barrier, option_type, barrier_type, n_paths=1000, n_steps=50, greek="vega", seed=102)
+        theta_barrier = optionel_exotic.calculate_greeks_barrier(barrier_option_wrapper, price_s0, strike, maturity, risk_free, volatility, barrier, option_type, barrier_type, n_paths=1000, n_steps=50, greek="theta", seed=102)
+        rho_barrier = optionel_exotic.calculate_greeks_barrier(barrier_option_wrapper, price_s0, strike, maturity, risk_free, volatility, barrier, option_type, barrier_type, n_paths=1000, n_steps=50, greek="rho", seed=102)
+
+       
+        greeks_child = dbc.Row([
+                dbc.Col(html.Ul([
+                    html.Li(f"Price: {barrier_price:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Delta: {delta_barrier:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Gamma: {gamma_barrier:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Vega: {vega_barrier:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Theta: {theta_barrier:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Rho: {rho_barrier:.2f}", style={"marginBottom": "10px"})
+                ]), width=12)
+            ],)
+        
+        fig = go.Figure()
+        for i in range(5):
+            fig.add_trace(go.Scatter(x=np.arange(paths.shape[0]), y=paths[:, i], mode='lines', name=f"Path {i+1}"))
+
+        # Ajouter la ligne de barrière
+        fig.add_trace(go.Scatter(x=np.arange(paths.shape[0]), y=[barrier] * paths.shape[0],
+                                mode='lines', line=dict(color='red', dash='dash'),
+                                name=f"Barrier={barrier}"))
+
+        # Ajouter le titre et les labels
+        fig.update_layout(
+            title=f"Paths Barrier Option (Barrier={barrier}) - Price : {barrier_price:.2f}",
+            xaxis_title="Time Steps",
+            yaxis_title="Price",
+            showlegend=True,
+            template="plotly_white"
+        )
+        return fig, greeks_child
+    else:
+        return dash.no_update, dash.no_update
+
+
+
+@app.callback(
+    [Output("simulate-asian-graph", "figure"),
+     Output("output-asian-div", "children")],
+    [State("price_s0-asian", "value"),
+     State("maturity-asian", "value"),
+     State("risk-free-asian", "value"),
+     State("volatility-asian", "value"),
+     State("strike-asian", "value"),
+     State("delta-asian", "value"),
+     State("option-type-asian", "value")],
+     Input("run-asian", "n_clicks"),
+)
+def simulate_option_asian(price_s0, maturity, risk_free, volatility, strike, delta, option_type, n_clicks):
+    if (price_s0 != None and maturity != None and risk_free != None and volatility != None and strike != None and delta != None):
+        
+        asian_price, paths, _, asian_expectation = optionel_exotic.asian_option_monte_carlo(price_s0, strike, maturity, risk_free, volatility, n_paths=1000, n_steps=50, delta=delta, option_type=option_type, seed=102)
+
+
+        delta_asian = optionel_exotic.calculate_greeks_asiatique(optionel_exotic.asian_option_monte_carlo,price_s0, strike, maturity, risk_free, volatility, delta, greek="delta", seed=102)
+        gamma_asian = optionel_exotic.calculate_greeks_asiatique(optionel_exotic.asian_option_monte_carlo, price_s0, strike, maturity, risk_free, volatility, delta, greek="gamma", seed=102)
+        vega_asian = optionel_exotic.calculate_greeks_asiatique(optionel_exotic.asian_option_monte_carlo,  price_s0, strike, maturity, risk_free, volatility, delta, greek="vega", seed=102)
+        theta_asian = optionel_exotic.calculate_greeks_asiatique(optionel_exotic.asian_option_monte_carlo, price_s0, strike, maturity, risk_free, volatility, delta, greek="theta", seed=102)
+        rho_asian = optionel_exotic.calculate_greeks_asiatique(optionel_exotic.asian_option_monte_carlo,  price_s0, strike, maturity, risk_free, volatility, delta, greek="rho", seed=102)
+
+        greeks_child = dbc.Row([
+                dbc.Col(html.Ul([
+                    html.Li(f"Avg over [T-delta, T]: {asian_price:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Expectation E[S_T - K]: {asian_expectation:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Delta: {delta_asian:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Gamma: {gamma_asian:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Vega: {vega_asian:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Theta: {theta_asian:.2f}", style={"marginBottom": "10px"}),
+                    html.Li(f"Rho: {rho_asian:.2f}", style={"marginBottom": "10px"})
+                ]), width=12)
+            ],)
+        
+        fig = go.Figure()
+        for i in range(5):
+            fig.add_trace(go.Scatter(x=np.arange(paths.shape[0]), y=paths[:, i], mode='lines', name=f"Path {i+1}"))
+
+        # Ajouter le titre et les labels
+        fig.update_layout(
+            title=f"Paths for Asian Option (Averaging over [T-delta, T] with delta={delta:.2f})",
+            xaxis_title="Time Steps",
+            yaxis_title="Price",
+            showlegend=True,
+            template="plotly_white"
+        )
+        return fig, greeks_child
+    else:
+        return dash.no_update, dash.no_update
 
 if __name__ == '__main__':
     app.run(debug=True)

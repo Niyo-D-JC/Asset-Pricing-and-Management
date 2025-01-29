@@ -118,7 +118,90 @@ class Analyse:
                                                     children=[
                                                         dbc.Row(
                                                             [
-                                                                
+                                                                dbc.Col([
+                                                                    html.Br(),
+                                                                    dbc.Card(
+                                                                        dbc.CardBody(
+                                                                            [   
+                                                                                html.Label("Interpolation method", style={"fontWeight": "normal","marginBottom": "5px"}),
+                                                                                dcc.Dropdown(
+                                                                                    id="interpolate-method",
+                                                                                    options=[
+                                                                                        {"label": "Log-linear method", "value": "log"},
+                                                                                        {"label": "Nelson-Siegel method", "value": "nelson"},
+                                                                                    ],
+                                                                                    value="log",
+                                                                                    placeholder="Select frequency",
+                                                                                    style={"fontWeight": "normal"}
+                                                                                ),
+                                                                                html.Br(),
+                                                                                dbc.Button(
+                                                                                    "Run Interpolation",
+                                                                                    id="run-interoplate",
+                                                                                    color="primary",
+                                                                                    className="w-100",
+                                                                                    n_clicks=1,
+                                                                                ),
+                                                                            ]
+                                                                        ),
+                                                                        className="mb-3",
+                                                                    ),
+                                                                    
+                                                                    html.H5("Zero Coupon Rate Data - 31st December 2024", style={"textAlign": "center"}),
+                                                                        dash_table.DataTable(
+                                                                            id="zero-coupons-table",
+                                                                            style_table={"overflowX": "auto"},
+                                                                            style_cell={"textAlign": "center", "fontFamily": "Arial", "fontSize": "14px"},
+                                                                            style_header={"fontWeight": "bold", "backgroundColor": "#f4f4f4"},
+                                                                            filter_action="native", filter_options={"placeholder_text": "Filter..."},
+                                                                            page_size=10,
+                                                                        ),
+                                                                        ],
+                                                                    width=3,
+                                                                ),
+                                                                # Graph for Tracking Error
+                                                                dbc.Col(
+                                                                    [  
+                                                                        dcc.Graph(id="interpolate-graph"),
+                                                                    ],
+                                                                    width=6,
+                                                                ),
+                                                                dbc.Col(
+                                                                    [  
+                                                                    html.Br(),
+                                                                    dbc.Card(
+                                                                        dbc.CardBody(
+                                                                            [   
+                                                                                html.Label("Pricing method/Rate", style={"fontWeight": "normal","marginBottom": "5px"}),
+                                                                                dcc.Dropdown(
+                                                                                    id="princing-method",
+                                                                                    options=[
+                                                                                        {"label": "Flexible Bond", "value": "flex-bond"},
+                                                                                        {"label": "Swap Rate Flexible", "value": "swap-rate"},
+                                                                                        {"label": "FRA Calculate", "value": "fra"},
+                                                                                    ],
+                                                                                    value="flex-bond",
+                                                                                    placeholder="Select frequency",
+                                                                                    style={"fontWeight": "normal"}
+                                                                                ),
+                                                                                html.Br(),
+                                                                                dbc.Col(html.Div(id="input-princing-div")),
+                                                                                dbc.Button(
+                                                                                    "Run Pricing/Rate",
+                                                                                    id="run-pricing",
+                                                                                    color="primary",
+                                                                                    className="w-100",
+                                                                                    n_clicks=1,
+                                                                                ),
+                                                                                html.Br(), html.Br(), 
+                                                                                dbc.Col(html.Div(id="output-princing-div"))
+                                                                            ]
+                                                                        ),
+                                                                        className="mb-3",
+                                                                    ),
+                                                                    ],
+                                                                    width=3,
+                                                                ),
                                                             ]
                                                         )
                                                     ],
@@ -137,7 +220,101 @@ class Analyse:
                                                     children=[
                                                         dbc.Row(
                                                             [
-                                                                
+                                                                dbc.Col([
+                                                                    html.Br(),
+                                                                    dbc.Card(
+                                                                        dbc.CardBody(
+                                                                            [   html.H5("Simulate trajectories", style={"marginBottom": "5px"}),
+                                                                                dbc.Row([
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="price_s0-bar", value= 100, type="number", placeholder="Initial stock price", className="mb-3")
+                                                                                        ], width=6),
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="maturity-bar", value= 1,debounce=True, type="number", placeholder="Maturity", className="mb-3")
+                                                                                        ], width=6)
+                                                                                    ]),
+                                                                                dbc.Row([
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="risk-free-bar", value= 0.03,type="number", placeholder="Risk-free rate", className="mb-3")
+                                                                                        ], width=6),
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="volatility-bar", value= 0.2,debounce=True, type="number", placeholder="Volatility", className="mb-3")
+                                                                                        ], width=6)
+                                                                                    ]),
+                                                                                dbc.Row([
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="strike-bar", value= 90, type="number", placeholder="Strike", className="mb-3")
+                                                                                        ], width=6),
+                                                                                        dbc.Col([
+                                                                                             dbc.Input(id="barrier-bar", value= 110, type="number", placeholder="Barrier", className="mb-3")
+                                                                                        ], width=6)
+                                                                                    ]),
+                                                                                dbc.Row([
+                                                                                        dbc.Col([
+                                                                                            dcc.Dropdown(
+                                                                                                id="barrier-type",
+                                                                                                options=[
+                                                                                                    {"label": "Up-and-Out", "value": "up-and-out"},
+                                                                                                    {"label": "Down-and-Out", "value": "down-and-out"},
+                                                                                                ],
+                                                                                                value="up-and-out",
+                                                                                                placeholder="Select frequency",
+                                                                                                style={"fontWeight": "normal"}
+                                                                                            ),
+                                                                                        ], width=6),
+                                                                                        dbc.Col([
+                                                                                            dcc.Dropdown(
+                                                                                                id="option-type",
+                                                                                                options=[
+                                                                                                    {"label": "Call Option", "value": "call"},
+                                                                                                    {"label": "Put Option", "value": "put"},
+                                                                                                ],
+                                                                                                value="call",
+                                                                                                placeholder="Select frequency",
+                                                                                                style={"fontWeight": "normal"}
+                                                                                            ),
+                                                                                        ], width=6),
+                                                                                        
+                                                                                    ]),
+                                                                                html.Br(),
+                                                                                dbc.Button(
+                                                                                    "Run Simulation",
+                                                                                    id="run-barrier",
+                                                                                    color="primary",
+                                                                                    className="w-100",
+                                                                                    n_clicks=1,
+                                                                                ),
+                                                                            ]
+                                                                        ),
+                                                                        className="mb-3",
+                                                                    ),
+                                                                        ],
+                                                                    width=3,
+                                                                ),
+                                                                # Graph for Tracking Error
+                                                                dbc.Col(
+                                                                    [  
+                                                                        dcc.Graph(id="simulate-barrier-graph")
+                                                                    ],
+                                                                    width=6,
+                                                                ),
+                                                                dbc.Col(
+                                                                    [  
+                                                                    html.Br(),
+                                                                    dbc.Card(
+                                                                        dbc.CardBody(
+                                                                            [   
+                                                                               html.H5("Barrier Option Price/Greeks:", style={"marginBottom": "5px"}),
+                                                                               html.Br(),
+                                                                               dbc.Col(html.Div(id="output-barrier-div"))
+
+                                                                            ]
+                                                                        ),
+                                                                        className="mb-3",
+                                                                    ),
+                                                                    ],
+                                                                    width=3,
+                                                                ),
                                                             ]
                                                         )
                                                     ],
@@ -157,6 +334,90 @@ class Analyse:
                                                         dbc.Row(
                                                             [
                                                                 
+                                                                dbc.Col([
+                                                                    html.Br(),
+                                                                    dbc.Card(
+                                                                        dbc.CardBody(
+                                                                            [   html.H5("Simulate trajectories", style={"marginBottom": "5px"}),
+                                                                                dbc.Row([
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="price_s0-asian", value= 100, type="number", placeholder="Initial stock price", className="mb-3")
+                                                                                        ], width=6),
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="maturity-asian", value= 1, debounce=True, type="number", placeholder="Maturity", className="mb-3")
+                                                                                        ], width=6)
+                                                                                    ]),
+                                                                                dbc.Row([
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="risk-free-asian", value= 0.03, type="number", placeholder="Risk-free rate", className="mb-3")
+                                                                                        ], width=6),
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="volatility-asian", value= 0.2, debounce=True, type="number", placeholder="Volatility", className="mb-3")
+                                                                                        ], width=6)
+                                                                                    ]),
+                                                                                dbc.Row([
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="strike-asian", value= 90, type="number", placeholder="Strike", className="mb-3")
+                                                                                        ], width=6),
+                                                                                        dbc.Col([
+                                                                                            dbc.Input(id="delta-asian", value= 0.25, type="number", placeholder="Averaging window", className="mb-3")
+                                                                                        ], width=6)
+                                                                                    ]),
+                                                                                dbc.Row([
+                                                                                        dbc.Col([
+                                                                                            dcc.Dropdown(
+                                                                                                id="option-type-asian",
+                                                                                                options=[
+                                                                                                    {"label": "Call Option", "value": "call"},
+                                                                                                    {"label": "Put Option", "value": "put"},
+                                                                                                ],
+                                                                                                value="call",
+                                                                                                placeholder="Select frequency",
+                                                                                                style={"fontWeight": "normal"}
+                                                                                            ),
+                                                                                        ], width=12),
+                                                                                        
+                                                                                    ]),
+                                                                                html.Br(),
+                                                                                
+                                                                                dbc.Button(
+                                                                                    "Run Simulation",
+                                                                                    id="run-asian",
+                                                                                    color="primary",
+                                                                                    className="w-100",
+                                                                                    n_clicks=1,
+                                                                                ),
+                                                                            ]
+                                                                        ),
+                                                                        className="mb-3",
+                                                                    ),
+                                                                        ],
+                                                                    width=3,
+                                                                ),
+                                                                # Graph for Tracking Error
+                                                                dbc.Col(
+                                                                    [  
+                                                                        dcc.Graph(id="simulate-asian-graph")
+                                                                    ],
+                                                                    width=6,
+                                                                ),
+                                                                dbc.Col(
+                                                                    [  
+                                                                    html.Br(),
+                                                                    dbc.Card(
+                                                                        dbc.CardBody(
+                                                                            [   
+                                                                               html.H5("Asian Option Price/Greeks:", style={"marginBottom": "5px"}),
+                                                                               html.Br(),
+                                                                               dbc.Col(html.Div(id="output-asian-div"))
+
+                                                                            ]
+                                                                        ),
+                                                                        className="mb-3",
+                                                                    ),
+                                                                    ],
+                                                                    width=3,
+                                                                ),
                                                             ]
                                                         )
                                                     ],

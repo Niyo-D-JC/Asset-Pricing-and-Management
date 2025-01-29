@@ -52,6 +52,7 @@ class Zero_Coupons:
         np.array
             Liste des taux interpolés.
         """
+        taux_zc = taux_zc / 100
         maturites_cibles = np.arange(min(maturites), max(maturites) + self.pas, self.pas)
         taux_interpolés = []
 
@@ -64,7 +65,7 @@ class Zero_Coupons:
                 r1, r2 = taux_zc[idx_sup - 1], taux_zc[idx_sup]
                 taux_interpolés.append(self.interpolation_loglin(t1, t2, r1, r2, t))
 
-        return np.array(taux_interpolés)
+        return maturites_cibles, np.array(taux_interpolés)
     
     def interpoler_taux_by_nelson_siegel(self, maturites, taux_zc):
         """
@@ -79,6 +80,7 @@ class Zero_Coupons:
         np.array
             Liste des taux interpolés.
         """
+        
         initial_params = [2.5, -1.0, 1.0, 2.0]  # (beta0, beta1, beta2, lambda)
 
         # Ajustement des paramètres
@@ -86,10 +88,10 @@ class Zero_Coupons:
 
         beta0_opt, beta1_opt, beta2_opt, lamb_opt = result.x
 
-        tau_fine = np.linspace(0.1, max(maturites), 100)  # Maturités entre 0.1 an et la maturité maximale
+        tau_fine = np.linspace(min(maturites), max(maturites), 100)  # Maturités
         fitted_rates = self.nelson_siegel(tau_fine, beta0_opt, beta1_opt, beta2_opt, lamb_opt)
 
-        return fitted_rates
+        return tau_fine, fitted_rates
     
     def encadrer_reel(self, nombre):
         """
@@ -218,7 +220,7 @@ class Zero_Coupons:
         Retour :
         - S : Le taux de swap.
         """
-    # Extraire les coefficients d'actualisation (B(t, T)) depuis la table
+        # Extraire les coefficients d'actualisation (B(t, T)) depuis la table
         #discount_factors = tx_zero_coupon["Coef"]
 
         # Initialisation des sommes pour le numérateur et le dénominateur
@@ -253,7 +255,7 @@ class Zero_Coupons:
         return S
     
 
-    def calculate_FRA(self, tx_zero_coupon,discount_factors, t, T, delta):
+    def calculate_FRA(self, tx_zero_coupon,discount_factors, T, delta, t=0):
         """
         Calcule le taux fixe (K) qui annule la valeur du swap payeur en utilisant les données de taux ZC.
 

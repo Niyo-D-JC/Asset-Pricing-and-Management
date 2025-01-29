@@ -37,6 +37,8 @@ class Optional_Excotic:
     def simulate_black_scholes(self, S0, T, r, sigma, n_paths, n_steps, seed=None): # Added seed as an argument with default value None
         if seed is not None: # Check if seed was provided
             np.random.seed(seed) # If yes, set the seed
+        else:
+            np.random.seed(102)
         dt = T / n_steps
         paths = np.zeros((n_steps + 1, n_paths))
         paths[0] = S0
