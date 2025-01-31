@@ -200,30 +200,37 @@ class Analyse:
                                                                             [   html.H5("Simulate trajectories", style={"marginBottom": "5px"}),
                                                                                 dbc.Row([
                                                                                         dbc.Col([
+                                                                                            html.Label("S0:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="price_s0-bar", value= 100, type="number", placeholder="Initial stock price", className="mb-3")
                                                                                         ], width=6),
                                                                                         dbc.Col([
+                                                                                            html.Label("Maturity:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="maturity-bar", value= 1,debounce=True, type="number", placeholder="Maturity", className="mb-3")
                                                                                         ], width=6)
                                                                                     ]),
                                                                                 dbc.Row([
                                                                                         dbc.Col([
+                                                                                            html.Label("Risk free:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="risk-free-bar", value= 0.03,type="number", placeholder="Risk-free rate", className="mb-3")
                                                                                         ], width=6),
                                                                                         dbc.Col([
+                                                                                            html.Label("Volatility:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="volatility-bar", value= 0.2,debounce=True, type="number", placeholder="Volatility", className="mb-3")
                                                                                         ], width=6)
                                                                                     ]),
                                                                                 dbc.Row([
                                                                                         dbc.Col([
+                                                                                            html.Label("Strike:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="strike-bar", value= 90, type="number", placeholder="Strike", className="mb-3")
                                                                                         ], width=6),
                                                                                         dbc.Col([
-                                                                                             dbc.Input(id="barrier-bar", value= 110, type="number", placeholder="Barrier", className="mb-3")
+                                                                                            html.Label("Barrier:", style={"fontWeight": "normal"}),
+                                                                                            dbc.Input(id="barrier-bar", value= 110, type="number", placeholder="Barrier", className="mb-3")
                                                                                         ], width=6)
                                                                                     ]),
                                                                                 dbc.Row([
                                                                                         dbc.Col([
+                                                                                            html.Label("Barrier type:", style={"fontWeight": "normal"}),
                                                                                             dcc.Dropdown(
                                                                                                 id="barrier-type",
                                                                                                 options=[
@@ -236,6 +243,7 @@ class Analyse:
                                                                                             ),
                                                                                         ], width=6),
                                                                                         dbc.Col([
+                                                                                            html.Label("Option type:", style={"fontWeight": "normal"}),
                                                                                             dcc.Dropdown(
                                                                                                 id="option-type",
                                                                                                 options=[
@@ -314,30 +322,37 @@ class Analyse:
                                                                             [   html.H5("Simulate trajectories", style={"marginBottom": "5px"}),
                                                                                 dbc.Row([
                                                                                         dbc.Col([
+                                                                                            html.Label("S0:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="price_s0-asian", value= 100, type="number", placeholder="Initial stock price", className="mb-3")
                                                                                         ], width=6),
                                                                                         dbc.Col([
+                                                                                            html.Label("Maturity:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="maturity-asian", value= 1, debounce=True, type="number", placeholder="Maturity", className="mb-3")
                                                                                         ], width=6)
                                                                                     ]),
                                                                                 dbc.Row([
                                                                                         dbc.Col([
+                                                                                            html.Label("Risk free:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="risk-free-asian", value= 0.03, type="number", placeholder="Risk-free rate", className="mb-3")
                                                                                         ], width=6),
                                                                                         dbc.Col([
+                                                                                            html.Label("Volatility:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="volatility-asian", value= 0.2, debounce=True, type="number", placeholder="Volatility", className="mb-3")
                                                                                         ], width=6)
                                                                                     ]),
                                                                                 dbc.Row([
                                                                                         dbc.Col([
+                                                                                            html.Label("Strike:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="strike-asian", value= 90, type="number", placeholder="Strike", className="mb-3")
                                                                                         ], width=6),
                                                                                         dbc.Col([
+                                                                                            html.Label("Time window:", style={"fontWeight": "normal"}),
                                                                                             dbc.Input(id="delta-asian", value= 0.25, type="number", placeholder="Averaging window", className="mb-3")
                                                                                         ], width=6)
                                                                                     ]),
                                                                                 dbc.Row([
                                                                                         dbc.Col([
+                                                                                            html.Label("Option type:", style={"fontWeight": "normal"}),
                                                                                             dcc.Dropdown(
                                                                                                 id="option-type-asian",
                                                                                                 options=[

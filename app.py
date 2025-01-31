@@ -74,7 +74,7 @@ options_dict_value = {
     False: "put"   # Quand le switch est désactivé, "Put"
 }
 
-taux_zero_coupons = pd.read_excel("data\\Courbe-zero-coupon-31-decembre-2024.xlsx", sheet_name="Données",header = 1)
+taux_zero_coupons = pd.read_excel("data/Courbe-zero-coupon-31-decembre-2024.xlsx", sheet_name="Données",header = 1)
 taux_zero_coupons.columns = ["Maturity", "Rate", "Actual Coef"]
 
 symbole_list = [
