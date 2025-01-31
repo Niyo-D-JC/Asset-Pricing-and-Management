@@ -120,33 +120,6 @@ class Analyse:
                                                             [
                                                                 dbc.Col([
                                                                     html.Br(),
-                                                                    dbc.Card(
-                                                                        dbc.CardBody(
-                                                                            [   
-                                                                                html.Label("Interpolation method", style={"fontWeight": "normal","marginBottom": "5px"}),
-                                                                                dcc.Dropdown(
-                                                                                    id="interpolate-method",
-                                                                                    options=[
-                                                                                        {"label": "Log-linear method", "value": "log"},
-                                                                                        {"label": "Nelson-Siegel method", "value": "nelson"},
-                                                                                    ],
-                                                                                    value="log",
-                                                                                    placeholder="Select frequency",
-                                                                                    style={"fontWeight": "normal"}
-                                                                                ),
-                                                                                html.Br(),
-                                                                                dbc.Button(
-                                                                                    "Run Interpolation",
-                                                                                    id="run-interoplate",
-                                                                                    color="primary",
-                                                                                    className="w-100",
-                                                                                    n_clicks=1,
-                                                                                ),
-                                                                            ]
-                                                                        ),
-                                                                        className="mb-3",
-                                                                    ),
-                                                                    
                                                                     html.H5("Zero Coupon Rate Data - 31st December 2024", style={"textAlign": "center"}),
                                                                         dash_table.DataTable(
                                                                             id="zero-coupons-table",

@@ -923,29 +923,17 @@ def update_tracking_error(n_clicks, start_date, end_date, frequency,sector, max_
 
 ################### OTHER RATE/PRICING ####################
 
-def generate_interpolation_graph(method, maturities, zero_coupon_rates):
-    if method == "log":
-        maturites_cibles, taux_interpoles = zero_coupons.interpoler_taux_by_loglin(maturities, zero_coupon_rates)
-        
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=maturities, y=zero_coupon_rates, mode='markers+lines', 
-                                 name="Observed Zero Coupon Rates", marker=dict(color='blue')))
-        fig.add_trace(go.Scatter(x=maturites_cibles, y=np.array(taux_interpoles) * 100, mode='lines',
-                                 name="Interpolated Zero Coupon Rates (Log-Linear)", line=dict(color='orange', dash='dash')))
-        fig.update_layout(title="Comparison of Zero Coupon Rate Curves",
-                          xaxis_title="Maturity (Years)",
-                          yaxis_title="Zero Coupon Rate (%)",
-                          legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5))
-    else:
-        tau_fine, fitted_rates = zero_coupons.interpoler_taux_by_nelson_siegel(maturities, zero_coupon_rates)
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=maturities, y=zero_coupon_rates, mode='markers+lines', 
-                                 name="Observed Zero Coupon Rates", marker=dict(color='blue')))
-        fig.add_trace(go.Scatter(x=tau_fine, y=fitted_rates, mode='lines',
-                                 name="Fitted Curve (Nelson-Siegel)", line=dict(color='orange',  dash='dash')))
-        fig.update_layout(title="Zero Coupon Rate Curve Fitting (Nelson-Siegel)",
-                          xaxis_title="Maturity (Years)",
-                          yaxis_title="Zero Coupon Rate (%)",
+def generate_interpolation_graph(maturities, zero_coupon_rates):
+
+    tau_fine, fitted_rates = zero_coupons.interpoler_taux_by_nelson_siegel(maturities, zero_coupon_rates)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=maturities, y=zero_coupon_rates, mode='markers+lines', 
+                                name="Observed Zero Coupon Rates", marker=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=tau_fine, y=fitted_rates, mode='lines',
+                                name="Fitted Curve (Nelson-Siegel)", line=dict(color='orange',  dash='dash')))
+    fig.update_layout(title="Zero Coupon Rate Curve Fitting (Nelson-Siegel)",
+                        xaxis_title="Maturity (Years)",
+                        yaxis_title="Zero Coupon Rate (%)",
                           legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5))
     return fig
 
@@ -954,10 +942,9 @@ def generate_interpolation_graph(method, maturities, zero_coupon_rates):
     [Output("zero-coupons-table", "data"),
      Output("zero-coupons-table", "columns"),
      Output("interpolate-graph", "figure")],
-    Input("run-interoplate", "n_clicks"),
-    State("interpolate-method", "value")
+    Input('load-data-button', 'n_clicks')
 )
-def update_interpolation(n_clicks, method):
+def update_interpolation(n_clicks):
     # Load data
     maturities = taux_zero_coupons["Maturity"]
     zero_coupon_rates = taux_zero_coupons["Rate"]
@@ -970,7 +957,7 @@ def update_interpolation(n_clicks, method):
     table_columns = [{"name": col, "id": col} for col in ["Maturity", "Rate", "Actual Coef"]]
     
     # Generate graph
-    figure = generate_interpolation_graph(method, maturities, zero_coupon_rates)
+    figure = generate_interpolation_graph(maturities, zero_coupon_rates)
     
     return table_data, table_columns, figure
 
@@ -1057,16 +1044,19 @@ def update_output_princing(method, coupon, principal, amplitude_echeances, matur
     if method == "flex-bond":
         if (coupon != None and principal != None and amplitude_echeances != None and maturity != None):
             val = zero_coupons.pricer_obligation_flexible(coupon, principal, amplitude_echeances ,maturity, taux_zero_coupons_value)
+        return html.H5(f"Price : {val:.2f}")
     elif method == "swap-rate":
         if (delta != None and maturity != None):
-            val = zero_coupons.swap_rate_flexible(taux_zero_coupons_value, discount_factors, delta, maturity)
+            K = zero_coupons.calculate_fixed_swap_rate_flexible(taux_zero_coupons_value, discount_factors, delta, maturity)
+            S = zero_coupons.swap_rate_flexible(taux_zero_coupons_value, discount_factors, delta, maturity)
+        return html.Div([html.H5(f"K : {K:.2f}"), html.H5(f"S : {S:.2f}")]) 
     elif method == "fra":
         if (delta != None and maturity != None):
             val = zero_coupons.calculate_FRA(taux_zero_coupons_value ,discount_factors, maturity, delta, t=0)
+        return html.H5(f"FRA Rate : {val:.2f}")
     else:
-        return ""
+        return html.H5(f"Result : {val:.2f}")
     
-    return html.H5(f"Result : {val:.2f}")
 
 def barrier_option_wrapper(S0, K, T, r, sigma, barrier, option_type, barrier_type, n_paths, n_steps, seed=102):
     return optionel_exotic.barrier_option(S0, K, T, r, sigma, n_paths, n_steps, barrier, option_type, barrier_type, seed=seed)
