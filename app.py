@@ -26,6 +26,9 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from plotly.subplots import make_subplots
+
+np.random.seed(102)
+
 # Initialisation du chemin permettant le lancement de l'application
 # Définition du chemin de base pour l'application Dash en utilisant une variable d'environnement pour l'utilisateur
 

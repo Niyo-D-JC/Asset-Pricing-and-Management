@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.stats import norm
+np.random.seed(102)
 
 class Optional_Excotic:
     def __init__(self):
